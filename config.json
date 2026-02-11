@@ -1,9 +1,16 @@
 {
-  "socks5": {
+  "mtproto": {
     "enabled": true,
     "host": "0.0.0.0",
+    "port": 443,
+    "secret": "",
+    "description": "MTProto прокси для Telegram (рекомендуется)"
+  },
+  "socks5": {
+    "enabled": false,
+    "host": "0.0.0.0",
     "port": 1080,
-    "description": "SOCKS5 прокси для Telegram"
+    "description": "SOCKS5 прокси для Telegram (альтернатива)"
   },
   "http": {
     "enabled": true,

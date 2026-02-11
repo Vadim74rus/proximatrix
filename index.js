@@ -1,12 +1,14 @@
 const http = require('http');
 const https = require('https');
 const net = require('net');
+const { MTProtoServer } = require('./src/mtproto-server');
 const { SocksServer } = require('./src/socks5-server');
 const { HttpProxyServer } = require('./src/http-proxy-server');
 const config = require('./config.json');
 
 class ProxyServer {
   constructor() {
+    this.mtprotoServer = null;
     this.socks5Server = null;
     this.httpServer = null;
     this.httpsServer = null;
@@ -15,8 +17,25 @@ class ProxyServer {
   async start() {
     console.log('🚀 Запуск прокси-сервера Proximatrix...\n');
 
-    // Запуск SOCKS5 прокси для Telegram
-    if (config.socks5.enabled) {
+    // Запуск MTProto прокси для Telegram (рекомендуется)
+    if (config.mtproto && config.mtproto.enabled) {
+      const secret = config.mtproto.secret && config.mtproto.secret.length === 32
+        ? config.mtproto.secret
+        : null;
+      this.mtprotoServer = new MTProtoServer({
+        port: config.mtproto.port,
+        host: config.mtproto.host,
+        secret: secret || undefined
+      });
+      await this.mtprotoServer.start();
+      const mtSecret = this.mtprotoServer.getSecret();
+      console.log(`✅ MTProto прокси запущен на порту ${config.mtproto.port} (для Telegram)`);
+      console.log(`   Secret: ${mtSecret}`);
+      console.log(`   Ссылка для Telegram: https://t.me/proxy?server=YOUR_IP&port=${config.mtproto.port}&secret=${mtSecret}`);
+    }
+
+    // Запуск SOCKS5 прокси для Telegram (альтернатива)
+    if (config.socks5 && config.socks5.enabled) {
       this.socks5Server = new SocksServer({
         port: config.socks5.port,
         host: config.socks5.host
@@ -48,7 +67,8 @@ class ProxyServer {
     }
 
     console.log('\n📊 Статус серверов:');
-    console.log(`   SOCKS5: ${config.socks5.enabled ? '✅ Активен' : '❌ Отключен'}`);
+    console.log(`   MTProto: ${config.mtproto && config.mtproto.enabled ? '✅ Активен' : '❌ Отключен'}`);
+    console.log(`   SOCKS5: ${config.socks5 && config.socks5.enabled ? '✅ Активен' : '❌ Отключен'}`);
     console.log(`   HTTP:   ${config.http.enabled ? '✅ Активен' : '❌ Отключен'}`);
     console.log(`   HTTPS:  ${config.https.enabled ? '✅ Активен' : '❌ Отключен'}`);
     console.log('\n💡 Используйте эти настройки в Telegram и WhatsApp клиентах');
@@ -56,7 +76,11 @@ class ProxyServer {
 
   async stop() {
     console.log('\n🛑 Остановка серверов...');
-    
+
+    if (this.mtprotoServer) {
+      await this.mtprotoServer.stop();
+    }
+
     if (this.socks5Server) {
       await this.socks5Server.stop();
     }

@@ -66,6 +66,18 @@ class HttpProxyServer {
       return;
     }
 
+    // Запросы только с путём (например /favicon.ico) — не проксируем, отвечаем сразу
+    if (targetUrl.startsWith('/') && !targetUrl.startsWith('//')) {
+      if (targetUrl === '/favicon.ico' || targetUrl.startsWith('/favicon')) {
+        res.writeHead(204, { 'Content-Length': '0' });
+        res.end();
+        return;
+      }
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Not Found');
+      return;
+    }
+
     try {
       const url = new URL(targetUrl.startsWith('http') ? targetUrl : `http://${targetUrl}`);
       const options = {

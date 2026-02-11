@@ -169,7 +169,7 @@ git clone https://github.com/Vadim74rus/proximatrix.git proximatrix
 Если репозиторий приватный, Git запросит:
 - **Username:** `Vadim74rus`
 - **Password:** используйте Personal Access Token
-
+  6Msc8uQyx07S
 ```bash
 cd proximatrix
 ```

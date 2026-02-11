@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   proximatrix:
     build:
@@ -8,7 +6,8 @@ services:
     container_name: proximatrix-proxy
     restart: unless-stopped
     ports:
-      - "1080:1080"   # SOCKS5 для Telegram
+      - "443:443"     # MTProto для Telegram
+      - "1080:1080"   # SOCKS5 для Telegram (если включен)
       - "8080:8080"   # HTTP для WhatsApp
       - "8443:8443"   # HTTPS для WhatsApp
     volumes:
