@@ -21,8 +21,8 @@ RUN addgroup -g 1001 -S nodejs && \
 # Переключаемся на непривилегированного пользователя
 USER nodejs
 
-# Открываем порты для прокси (MTProto 443, SOCKS5 1080, HTTP 8080, HTTPS 8443)
-EXPOSE 443 1080 8080 8443
+# Открываем порты для прокси (MTProto 8444, SOCKS5 1080, HTTP 8080, HTTPS 8443)
+EXPOSE 8444 1080 8080 8443
 
 # Запускаем приложение
 CMD ["node", "index.js"]

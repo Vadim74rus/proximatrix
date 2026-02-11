@@ -4,7 +4,7 @@
 
 ## 🚀 Возможности
 
-- ✅ **MTProto прокси для Telegram** (порт 443) — рекомендуемый тип для Telegram
+- ✅ **MTProto прокси для Telegram** (порт 8444) — рекомендуемый тип для Telegram
 - ✅ SOCKS5 прокси для Telegram (порт 1080, опционально)
 - ✅ HTTP прокси для WhatsApp (порт 8080)
 - ✅ HTTPS прокси для WhatsApp (порт 8443)
@@ -50,7 +50,7 @@ cd /opt/proximatrix
 # Загрузите файлы через scp или git
 
 # 4. Настройте файрвол
-ufw allow 443/tcp    # MTProto для Telegram
+ufw allow 8444/tcp   # MTProto для Telegram
 ufw allow 1080/tcp
 ufw allow 8080/tcp
 ufw allow 8443/tcp
@@ -163,8 +163,8 @@ pm2 startup
 2. В Telegram: **Настройки** → **Данные и хранилище** → **Прокси**
 3. Нажмите **Добавить прокси** → выберите **MTProto**
 4. Вставьте ссылку вида:  
-   `https://t.me/proxy?server=77.221.156.12&port=443&secret=XXXX`  
-   (или введите вручную: сервер `77.221.156.12`, порт `443`, секрет из логов)
+   `https://t.me/proxy?server=77.221.156.12&port=8444&secret=XXXX`  
+   (или введите вручную: сервер `77.221.156.12`, порт `8444`, секрет из логов)
 5. Сохраните и включите прокси
 
 ### Telegram (SOCKS5 — альтернатива)

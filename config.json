@@ -2,9 +2,10 @@
   "mtproto": {
     "enabled": true,
     "host": "0.0.0.0",
-    "port": 443,
+    "port": 8444,
+    "publicIp": "77.221.156.12",
     "secret": "",
-    "description": "MTProto прокси для Telegram (рекомендуется)"
+    "description": "MTProto прокси для Telegram (порт 8444 — чтобы не конфликтовать с HTTPS на 443)"
   },
   "socks5": {
     "enabled": false,

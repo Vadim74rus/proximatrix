@@ -29,9 +29,13 @@ class ProxyServer {
       });
       await this.mtprotoServer.start();
       const mtSecret = this.mtprotoServer.getSecret();
+      const publicIp = config.mtproto.publicIp || process.env.PROXY_PUBLIC_IP || 'YOUR_IP';
       console.log(`✅ MTProto прокси запущен на порту ${config.mtproto.port} (для Telegram)`);
       console.log(`   Secret: ${mtSecret}`);
-      console.log(`   Ссылка для Telegram: https://t.me/proxy?server=YOUR_IP&port=${config.mtproto.port}&secret=${mtSecret}`);
+      console.log(`   Ссылка для Telegram: https://t.me/proxy?server=${publicIp}&port=${config.mtproto.port}&secret=${mtSecret}`);
+      if (publicIp === 'YOUR_IP') {
+        console.log(`   ⚠️  Укажите IP сервера в config.json (mtproto.publicIp) или в переменной PROXY_PUBLIC_IP`);
+      }
     }
 
     // Запуск SOCKS5 прокси для Telegram (альтернатива)

@@ -5,8 +5,10 @@ services:
       dockerfile: Dockerfile
     container_name: proximatrix-proxy
     restart: unless-stopped
+    environment:
+      - PROXY_PUBLIC_IP=77.221.156.12
     ports:
-      - "443:443"     # MTProto для Telegram
+      - "8444:8444"   # MTProto для Telegram (не 443 — часто занят веб-сервером)
       - "1080:1080"   # SOCKS5 для Telegram (если включен)
       - "8080:8080"   # HTTP для WhatsApp
       - "8443:8443"   # HTTPS для WhatsApp
