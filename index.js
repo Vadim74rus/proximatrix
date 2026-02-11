@@ -4,6 +4,9 @@ const net = require('net');
 const { MTProtoServer } = require('./src/mtproto-server');
 const { SocksServer } = require('./src/socks5-server');
 const { HttpProxyServer } = require('./src/http-proxy-server');
+const { connect: connectDb } = require('./src/db');
+const usersMongo = require('./src/users-mongo');
+const { start: startAdminApi } = require('./src/admin-api');
 const config = require('./config.json');
 
 class ProxyServer {
@@ -12,30 +15,65 @@ class ProxyServer {
     this.socks5Server = null;
     this.httpServer = null;
     this.httpsServer = null;
+    this.adminApiServer = null;
   }
 
   async start() {
     console.log('🚀 Запуск прокси-сервера Proximatrix...\n');
 
-    // Запуск MTProto прокси для Telegram (рекомендуется)
+    const publicIp = config.mtproto?.publicIp || process.env.PROXY_PUBLIC_IP || 'YOUR_IP';
+    const useMultiUser = config.api?.enabled === true;
+
+    if (useMultiUser) {
+      const mongoUri = config.mongo?.uri || process.env.MONGODB_URI;
+      if (!mongoUri) throw new Error('При api.enabled нужен config.mongo.uri или MONGODB_URI');
+      await connectDb(mongoUri);
+      await usersMongo.refreshSecretsCache();
+      console.log('✅ MongoDB подключена, кэш секретов обновлён');
+    }
+
+    // Запуск MTProto прокси для Telegram
     if (config.mtproto && config.mtproto.enabled) {
-      const secret = config.mtproto.secret && config.mtproto.secret.length === 32
-        ? config.mtproto.secret
-        : null;
-      this.mtprotoServer = new MTProtoServer({
+      const opts = {
         port: config.mtproto.port,
         host: config.mtproto.host,
-        secret: secret || undefined
-      });
-      await this.mtprotoServer.start();
-      const mtSecret = this.mtprotoServer.getSecret();
-      const publicIp = config.mtproto.publicIp || process.env.PROXY_PUBLIC_IP || 'YOUR_IP';
-      console.log(`✅ MTProto прокси запущен на порту ${config.mtproto.port} (для Telegram)`);
-      console.log(`   Secret: ${mtSecret}`);
-      console.log(`   Ссылка для Telegram: https://t.me/proxy?server=${publicIp}&port=${config.mtproto.port}&secret=${mtSecret}`);
-      if (publicIp === 'YOUR_IP') {
-        console.log(`   ⚠️  Укажите IP сервера в config.json (mtproto.publicIp) или в переменной PROXY_PUBLIC_IP`);
+        publicIp,
+      };
+      if (useMultiUser) {
+        opts.getSecrets = () => usersMongo.getEnabledSecretsSync();
+      } else {
+        const secret = config.mtproto.secret && config.mtproto.secret.length === 32
+          ? config.mtproto.secret
+          : null;
+        opts.secret = secret || undefined;
       }
+      this.mtprotoServer = new MTProtoServer(opts);
+      await this.mtprotoServer.start();
+      console.log(`✅ MTProto прокси запущен на порту ${config.mtproto.port} (для Telegram)`);
+      if (useMultiUser) {
+        const count = usersMongo.getEnabledSecretsSync().length;
+        console.log(`   Режим: мультипользователь (MongoDB), активных секретов: ${count}. Ссылки — через API.`);
+      } else {
+        const mtSecret = this.mtprotoServer.getSecret();
+        console.log(`   Secret: ${mtSecret}`);
+        console.log(`   Ссылка: https://t.me/proxy?server=${publicIp}&port=${config.mtproto.port}&secret=${mtSecret}`);
+      }
+      if (publicIp === 'YOUR_IP') {
+        console.log(`   ⚠️  Укажите IP в config.json (mtproto.publicIp) или PROXY_PUBLIC_IP`);
+      }
+    }
+
+    // API управления пользователями (MongoDB)
+    if (config.api && config.api.enabled) {
+      this.adminApiServer = await startAdminApi({
+        port: config.api.port || 9090,
+        host: config.api.host || '0.0.0.0',
+        apiKey: config.api.apiKey || process.env.PROXY_API_KEY || '',
+        publicIp,
+        mtPort: config.mtproto?.port || 8444,
+      });
+      console.log(`✅ API управления пользователями: http://${config.api.host || '0.0.0.0'}:${config.api.port || 9090}`);
+      if (config.api.apiKey) console.log(`   Защита: X-API-Key`);
     }
 
     // Запуск SOCKS5 прокси для Telegram (альтернатива)
@@ -72,6 +110,7 @@ class ProxyServer {
 
     console.log('\n📊 Статус серверов:');
     console.log(`   MTProto: ${config.mtproto && config.mtproto.enabled ? '✅ Активен' : '❌ Отключен'}`);
+    console.log(`   API:    ${config.api && config.api.enabled ? '✅ Активен' : '❌ Отключен'}`);
     console.log(`   SOCKS5: ${config.socks5 && config.socks5.enabled ? '✅ Активен' : '❌ Отключен'}`);
     console.log(`   HTTP:   ${config.http.enabled ? '✅ Активен' : '❌ Отключен'}`);
     console.log(`   HTTPS:  ${config.https.enabled ? '✅ Активен' : '❌ Отключен'}`);
@@ -81,6 +120,13 @@ class ProxyServer {
   async stop() {
     console.log('\n🛑 Остановка серверов...');
 
+    if (this.adminApiServer) {
+      this.adminApiServer.close();
+    }
+    try {
+      const { close: closeDb } = require('./src/db');
+      await closeDb();
+    } catch (_) {}
     if (this.mtprotoServer) {
       await this.mtprotoServer.stop();
     }

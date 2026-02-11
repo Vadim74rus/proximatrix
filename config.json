@@ -5,28 +5,39 @@
     "port": 8444,
     "publicIp": "77.221.156.12",
     "secret": "",
-    "description": "MTProto прокси для Telegram (порт 8444 — чтобы не конфликтовать с HTTPS на 443)"
+    "description": "MTProto прокси для Telegram"
   },
   "socks5": {
     "enabled": false,
     "host": "0.0.0.0",
     "port": 1080,
-    "description": "SOCKS5 прокси для Telegram (альтернатива)"
+    "description": "SOCKS5 для Telegram"
   },
   "http": {
     "enabled": true,
     "host": "0.0.0.0",
     "port": 8080,
-    "description": "HTTP прокси для WhatsApp"
+    "description": "HTTP для WhatsApp"
   },
   "https": {
     "enabled": true,
     "host": "0.0.0.0",
     "port": 8443,
-    "description": "HTTPS прокси для WhatsApp"
+    "description": "HTTPS для WhatsApp"
   },
   "logging": {
     "enabled": true,
     "level": "info"
+  },
+  "api": {
+    "enabled": true,
+    "port": 9090,
+    "host": "0.0.0.0",
+    "apiKey": "",
+    "description": "API управления пользователями (MongoDB)"
+  },
+  "mongo": {
+    "uri": "",
+    "description": "MongoDB URI (или задайте MONGODB_URI в окружении)"
   }
 }

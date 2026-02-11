@@ -31,7 +31,9 @@ class MTProtoServer {
   constructor(options = {}) {
     this.port = options.port || 443;
     this.host = options.host || '0.0.0.0';
+    this.publicIp = options.publicIp || '';
     this.secret = options.secret || this.generateSecret();
+    this.getSecrets = options.getSecrets || null;
     this.server = null;
     this.serverIdleCons = [];
     this.telegramIdleNum = TELEGRAM_SERVERS.map(() => MIN_IDLE_SERVERS);
@@ -43,6 +45,14 @@ class MTProtoServer {
 
   generateSecret() {
     return crypto.randomBytes(16).toString('hex');
+  }
+
+  getSecretList() {
+    if (this.getSecrets && typeof this.getSecrets === 'function') {
+      const list = this.getSecrets();
+      return Array.isArray(list) ? list.filter(s => s && s.length === 32) : [];
+    }
+    return this.secret ? [this.secret] : [];
   }
 
   createIdleServer(id, ip) {
@@ -128,9 +138,9 @@ class MTProtoServer {
         // Игнорируем, если prlimit недоступен (например, в Alpine)
       }
 
-      const binSecret = Buffer.from(this.secret, 'hex');
-      if (binSecret.length !== 16) {
-        reject(new Error('MTProto secret должен быть 32 hex-символа (16 байт). Сгенерируйте: head -c 16 /dev/urandom | xxd -ps'));
+      const secretsList = this.getSecretList();
+      if (secretsList.length === 0) {
+        reject(new Error('MTProto: нужен хотя бы один секрет (config или getSecrets)'));
         return;
       }
 
@@ -178,44 +188,54 @@ class MTProtoServer {
             const buf64 = Buffer.allocUnsafe(64);
             data.copy(buf64);
 
-            let keyIv = Buffer.allocUnsafe(48);
-            buf64.copy(keyIv, 0, 8);
+            const secretsList = this.getSecretList();
+            let matched = false;
+            for (const secretHex of secretsList) {
+              const binSecret = Buffer.from(secretHex, 'hex');
+              if (binSecret.length !== 16) continue;
 
-            let decryptKeyClient = Buffer.allocUnsafe(32);
-            keyIv.copy(decryptKeyClient, 0, 0);
-            let decryptIvClient = Buffer.allocUnsafe(16);
-            keyIv.copy(decryptIvClient, 0, 32);
+              let keyIv = Buffer.allocUnsafe(48);
+              buf64.copy(keyIv, 0, 8);
 
-            reverseInplace(keyIv);
+              let decryptKeyClient = Buffer.allocUnsafe(32);
+              keyIv.copy(decryptKeyClient, 0, 0);
+              let decryptIvClient = Buffer.allocUnsafe(16);
+              keyIv.copy(decryptIvClient, 0, 32);
 
-            let encryptKeyClient = Buffer.allocUnsafe(32);
-            keyIv.copy(encryptKeyClient, 0, 0);
-            let encryptIvClient = Buffer.allocUnsafe(16);
-            keyIv.copy(encryptIvClient, 0, 32);
+              reverseInplace(keyIv);
 
-            decryptKeyClient = crypto.createHash('sha256').update(Buffer.concat([decryptKeyClient, binSecret])).digest();
-            encryptKeyClient = crypto.createHash('sha256').update(Buffer.concat([encryptKeyClient, binSecret])).digest();
+              let encryptKeyClient = Buffer.allocUnsafe(32);
+              keyIv.copy(encryptKeyClient, 0, 0);
+              let encryptIvClient = Buffer.allocUnsafe(16);
+              keyIv.copy(encryptIvClient, 0, 32);
 
-            socket.cipherDecClient = crypto.createDecipheriv('aes-256-ctr', decryptKeyClient, decryptIvClient);
-            socket.cipherEncClient = crypto.createCipheriv('aes-256-ctr', encryptKeyClient, encryptIvClient);
+              decryptKeyClient = crypto.createHash('sha256').update(Buffer.concat([decryptKeyClient, binSecret])).digest();
+              encryptKeyClient = crypto.createHash('sha256').update(Buffer.concat([encryptKeyClient, binSecret])).digest();
 
-            const decAuthPacket = socket.cipherDecClient.update(buf64);
-            socket.dcId = Math.abs(decAuthPacket.readInt16LE(60)) - 1;
+              const cipherDec = crypto.createDecipheriv('aes-256-ctr', decryptKeyClient, decryptIvClient);
+              const decAuthPacket = cipherDec.update(buf64);
+              const dcId = Math.abs(decAuthPacket.readInt16LE(60)) - 1;
 
-            for (let i = 0; i < 4; i++) {
-              if (decAuthPacket[56 + i] !== 0xef) {
-                socket.destroy();
-                return;
+              let valid = true;
+              for (let i = 0; i < 4; i++) {
+                if (decAuthPacket[56 + i] !== 0xef) { valid = false; break; }
+              }
+              if (dcId > 4 || dcId < 0) valid = false;
+
+              if (valid) {
+                socket.cipherDecClient = cipherDec;
+                socket.cipherEncClient = crypto.createCipheriv('aes-256-ctr', encryptKeyClient, encryptIvClient);
+                socket.dcId = dcId;
+                data = data.slice(64, data.length);
+                socket.init = true;
+                matched = true;
+                break;
               }
             }
-
-            if (socket.dcId > 4 || socket.dcId < 0) {
+            if (!matched) {
               socket.destroy();
               return;
             }
-
-            data = data.slice(64, data.length);
-            socket.init = true;
           }
 
           const payload = socket.cipherDecClient.update(data);
@@ -272,11 +292,13 @@ class MTProtoServer {
   }
 
   getSecret() {
-    return this.secret;
+    const list = this.getSecretList();
+    return list.length > 0 ? list[0] : this.secret;
   }
 
-  getConnectionLink() {
-    return `https://t.me/proxy?server=${this.host === '0.0.0.0' ? 'YOUR_SERVER_IP' : this.host}&port=${this.port}&secret=${this.secret}`;
+  getConnectionLink(secret, publicIp) {
+    const host = publicIp || this.publicIp || (this.host === '0.0.0.0' ? 'YOUR_SERVER_IP' : this.host);
+    return `https://t.me/proxy?server=${host}&port=${this.port}&secret=${secret || this.getSecret()}`;
   }
 }
 

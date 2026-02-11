@@ -1,19 +1,42 @@
 services:
+  mongo:
+    image: mongo:7
+    container_name: proximatrix-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: proximatrix
+      MONGO_INITDB_ROOT_PASSWORD: changeme_proximatrix_2026
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - proximatrix-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   proximatrix:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: proximatrix-proxy
     restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
     environment:
-      - PROXY_PUBLIC_IP=77.221.156.12
+      PROXY_PUBLIC_IP: "77.221.156.12"
+      MONGODB_URI: "mongodb://proximatrix:changeme_proximatrix_2026@mongo:27017/proximatrix?authSource=admin"
+      PROXY_API_KEY: "proximatrix-api-key-change-in-production"
     ports:
-      - "8444:8444"   # MTProto для Telegram (не 443 — часто занят веб-сервером)
-      - "1080:1080"   # SOCKS5 для Telegram (если включен)
-      - "8080:8080"   # HTTP для WhatsApp
-      - "8443:8443"   # HTTPS для WhatsApp
+      - "8444:8444"
+      - "9090:9090"
+      - "1080:1080"
+      - "8080:8080"
+      - "8443:8443"
     volumes:
-      - ./config.json:/app/config.json:ro  # Монтируем конфиг для возможности изменения без пересборки
+      - ./config.json:/app/config.json:ro
     networks:
       - proximatrix-network
     healthcheck:
@@ -27,6 +50,9 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+volumes:
+  mongo-data:
 
 networks:
   proximatrix-network:

@@ -31,7 +31,8 @@
 ## 📚 Документация
 
 - **[DEPLOY.md](DEPLOY.md)** - Подробная инструкция от подключения до деплоя
-- **[WEBSTORM_GITHUB.md](WEBSTORM_GITHUB.md)** - Загрузка проекта в GitHub через WebStorm ⭐
+- **[WHATSAPP_SETUP.md](WHATSAPP_SETUP.md)** - Как настроить WhatsApp (Web и телефон) через прокси ⭐
+- **[WEBSTORM_GITHUB.md](WEBSTORM_GITHUB.md)** - Загрузка проекта в GitHub через WebStorm
 - **[GITHUB_SETUP.md](GITHUB_SETUP.md)** - Инструкция по загрузке проекта в GitHub
 - **[QUICKSTART.md](QUICKSTART.md)** - Быстрый старт
 - **[DOCKER_COMMANDS.md](DOCKER_COMMANDS.md)** - Шпаргалка по Docker командам
