@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  proximatrix:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: proximatrix-proxy
+    restart: unless-stopped
+    ports:
+      - "1080:1080"   # SOCKS5 для Telegram
+      - "8080:8080"   # HTTP для WhatsApp
+      - "8443:8443"   # HTTPS для WhatsApp
+    volumes:
+      - ./config.json:/app/config.json:ro  # Монтируем конфиг для возможности изменения без пересборки
+    networks:
+      - proximatrix-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  proximatrix-network:
+    driver: bridge

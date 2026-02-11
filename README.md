@@ -1,0 +1,305 @@
+# Proximatrix - Прокси-сервер для Telegram и WhatsApp
+
+Прокси-сервер на Node.js для работы с Telegram и WhatsApp через ваш виртуальный сервер.
+
+## 🚀 Возможности
+
+- ✅ SOCKS5 прокси для Telegram (порт 1080)
+- ✅ HTTP прокси для WhatsApp (порт 8080)
+- ✅ HTTPS прокси для WhatsApp (порт 8443)
+- ✅ Docker контейнеризация для простого развертывания
+- ✅ Простая настройка через config.json
+- ✅ Логирование подключений
+
+## 📋 Требования
+
+- Docker и Docker Compose (рекомендуется)
+- Или Node.js 16+ для прямого запуска
+- Ubuntu 24.04 (или другая Linux система)
+- Минимум 2 GB RAM
+- Доступ к серверу по SSH
+
+## 🐳 Быстрое развертывание через Docker (Рекомендуется)
+
+**📖 Полная инструкция:** См. [DEPLOY.md](DEPLOY.md) - пошаговое руководство от подключения к серверу до настройки клиентов (включает инструкции для Windows/PuTTY и Linux/Mac)
+
+### Автоматическое развертывание
+
+```bash
+# Сделайте скрипт исполняемым
+chmod +x deploy-docker.sh
+
+# Запустите автоматическое развертывание
+./deploy-docker.sh
+```
+
+### Ручное развертывание
+
+```bash
+# 1. Подключитесь к серверу
+ssh root@77.221.156.12
+
+# 2. Установите Docker (если еще не установлен)
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
+
+# 3. Загрузите проект
+mkdir -p /opt/proximatrix
+cd /opt/proximatrix
+# Загрузите файлы через scp или git
+
+# 4. Настройте файрвол
+ufw allow 1080/tcp
+ufw allow 8080/tcp
+ufw allow 8443/tcp
+
+# 5. Запустите через Docker Compose
+docker compose up -d
+
+# 6. Проверьте статус
+docker compose ps
+docker compose logs -f
+```
+
+## 🔧 Установка без Docker (альтернативный способ)
+
+### 1. Подключитесь к серверу
+
+```bash
+ssh root@77.221.156.12
+```
+
+### 2. Установите Node.js
+
+```bash
+# Обновление системы
+apt update && apt upgrade -y
+
+# Установка Node.js 20.x
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt install -y nodejs
+
+# Проверка версии
+node --version
+npm --version
+```
+
+### 3. Установите проект
+
+```bash
+# Создайте директорию для проекта
+mkdir -p /opt/proximatrix
+cd /opt/proximatrix
+
+# Загрузите файлы проекта (используйте git или scp)
+# Если используете git:
+git clone <ваш-репозиторий> .
+
+# Или загрузите файлы через scp с локального компьютера:
+# scp -r . root@77.221.156.12:/opt/proximatrix/
+
+# Установите зависимости
+npm install
+```
+
+### 4. Настройте файрвол
+
+```bash
+# Разрешите порты в UFW
+ufw allow 1080/tcp   # SOCKS5 для Telegram
+ufw allow 8080/tcp   # HTTP для WhatsApp
+ufw allow 8443/tcp   # HTTPS для WhatsApp
+
+# Или если используете iptables:
+iptables -A INPUT -p tcp --dport 1080 -j ACCEPT
+iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
+iptables -A INPUT -p tcp --dport 8443 -j ACCEPT
+```
+
+### 5. Запустите сервер
+
+```bash
+# Запуск вручную
+npm start
+
+# Или используйте PM2 для постоянной работы
+npm install -g pm2
+pm2 start index.js --name proximatrix
+pm2 save
+pm2 startup
+```
+
+## ⚙️ Конфигурация
+
+Отредактируйте `config.json` для изменения настроек:
+
+```json
+{
+  "socks5": {
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 1080
+  },
+  "http": {
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 8080
+  },
+  "https": {
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 8443
+  }
+}
+```
+
+## 📱 Настройка клиентов
+
+### Telegram
+
+1. Откройте Telegram Desktop или мобильное приложение
+2. Перейдите в **Настройки** → **Продвинутые** → **Прокси-серверы**
+3. Нажмите **Добавить прокси**
+4. Выберите тип: **SOCKS5**
+5. Заполните данные:
+   - **Сервер:** `77.221.156.12`
+   - **Порт:** `1080`
+   - **Имя пользователя:** (оставьте пустым)
+   - **Пароль:** (оставьте пустым)
+6. Сохраните и активируйте прокси
+
+### WhatsApp Web
+
+1. Откройте WhatsApp Web в браузере
+2. Настройте прокси в браузере:
+
+**Для Chrome/Edge:**
+- Установите расширение прокси (например, Proxy SwitchyOmega)
+- Настройте HTTP прокси: `77.221.156.12:8080`
+- Настройте HTTPS прокси: `77.221.156.12:8443`
+
+**Для Firefox:**
+- Откройте **Настройки** → **Сеть** → **Настройки**
+- Выберите **Ручная настройка прокси**
+- HTTP прокси: `77.221.156.12`, Порт: `8080`
+- HTTPS прокси: `77.221.156.12`, Порт: `8443`
+- Сохраните настройки
+
+**Для мобильного WhatsApp:**
+- Используйте приложения-прокси или VPN с поддержкой HTTP прокси
+- Настройте прокси: `77.221.156.12:8080`
+
+## 🔍 Проверка работы
+
+### Проверка SOCKS5 прокси
+
+```bash
+curl --socks5 77.221.156.12:1080 http://ifconfig.me
+```
+
+### Проверка HTTP прокси
+
+```bash
+curl --proxy http://77.221.156.12:8080 http://ifconfig.me
+```
+
+## 🐳 Управление Docker контейнером
+
+```bash
+# Просмотр статуса
+docker compose ps
+
+# Просмотр логов
+docker compose logs -f proximatrix
+
+# Перезапуск
+docker compose restart proximatrix
+
+# Остановка
+docker compose stop proximatrix
+
+# Запуск
+docker compose start proximatrix
+
+# Пересборка после изменений
+docker compose up -d --build
+
+# Удаление
+docker compose down
+```
+
+## 🛠️ Управление сервисом (PM2 - для установки без Docker)
+
+```bash
+# Просмотр статуса
+pm2 status
+
+# Просмотр логов
+pm2 logs proximatrix
+
+# Перезапуск
+pm2 restart proximatrix
+
+# Остановка
+pm2 stop proximatrix
+
+# Удаление из автозапуска
+pm2 delete proximatrix
+```
+
+## 📊 Мониторинг
+
+Проверьте логи для отслеживания подключений:
+
+```bash
+# Если используете PM2
+pm2 logs proximatrix
+
+# Или напрямую
+npm start
+```
+
+## 🔒 Безопасность
+
+⚠️ **Важно:** Текущая версия не требует аутентификации. Для продакшена рекомендуется:
+
+1. Добавить аутентификацию в SOCKS5
+2. Использовать HTTPS с сертификатами
+3. Настроить rate limiting
+4. Использовать VPN или туннель для дополнительной защиты
+
+## 🐛 Решение проблем
+
+### Прокси не работает
+
+**Для Docker:**
+1. Проверьте статус контейнера: `docker compose ps`
+2. Проверьте логи: `docker compose logs proximatrix`
+3. Проверьте порты: `netstat -tulpn | grep -E '1080|8080|8443'`
+4. Проверьте файрвол: `ufw status`
+
+**Для прямого запуска:**
+1. Проверьте, что сервер запущен: `pm2 status` или `ps aux | grep node`
+2. Проверьте порты: `netstat -tulpn | grep -E '1080|8080|8443'`
+3. Проверьте файрвол: `ufw status` или `iptables -L`
+4. Проверьте логи: `pm2 logs proximatrix`
+
+### Telegram не подключается
+
+- Убедитесь, что используете SOCKS5, а не HTTP
+- Проверьте, что порт 1080 открыт
+- Попробуйте другой прокси-сервер для проверки
+
+### WhatsApp не работает
+
+- Убедитесь, что прокси настроен в браузере правильно
+- Проверьте, что порты 8080 и 8443 открыты
+- Попробуйте использовать HTTPS прокси вместо HTTP
+
+## 📝 Лицензия
+
+ISC
+
+## 👤 Автор
+
+Proximatrix Project

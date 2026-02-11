@@ -1,0 +1,24 @@
+{
+  "socks5": {
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 1080,
+    "description": "SOCKS5 прокси для Telegram"
+  },
+  "http": {
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 8080,
+    "description": "HTTP прокси для WhatsApp"
+  },
+  "https": {
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 8443,
+    "description": "HTTPS прокси для WhatsApp"
+  },
+  "logging": {
+    "enabled": true,
+    "level": "info"
+  }
+}
