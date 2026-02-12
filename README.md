@@ -256,14 +256,36 @@ pm2 logs proximatrix
 npm start
 ```
 
+## 🔌 Подключение с другого сервера (API)
+
+Если вы хотите подключить бот или другой сервис к API Proximatrix для управления пользователями MTProxy:
+
+📖 **Подробная инструкция:** [CONNECT_FROM_OTHER_SERVER.md](CONNECT_FROM_OTHER_SERVER.md)
+
+**Быстрая настройка:**
+
+1. На сервере Proximatrix порт **9090** должен быть открыт в UFW
+2. Создайте `.env` на вашем боте/сервере:
+
+   ```env
+   PROXY_API_URL=http://77.221.156.12:9090
+   PROXY_API_KEY=proximatrix-api-key-change-in-production
+   ```
+
+3. Ключ `PROXY_API_KEY` должен совпадать с `PROXY_API_KEY` в `docker-compose.yml` на сервере Proximatrix
+
+**Документация API:** [API.md](API.md)  
+**Ключи и настройки:** [DEPLOY_KEYS.md](DEPLOY_KEYS.md)
+
 ## 🔒 Безопасность
 
-⚠️ **Важно:** Текущая версия не требует аутентификации. Для продакшена рекомендуется:
+⚠️ **Важно:** Для продакшена обязательно:
 
-1. Добавить аутентификацию в SOCKS5
-2. Использовать HTTPS с сертификатами
-3. Настроить rate limiting
-4. Использовать VPN или туннель для дополнительной защиты
+1. Измените `PROXY_API_KEY` в docker-compose.yml на свой длинный случайный ключ
+2. Измените пароль MongoDB (`MONGO_INITDB_ROOT_PASSWORD`) в docker-compose.yml
+3. Используйте HTTPS для API (настройте reverse proxy с SSL)
+4. Настройте rate limiting для API
+5. Ограничьте доступ к портам через файрвол (только нужные IP)
 
 ## 🐛 Решение проблем
 
