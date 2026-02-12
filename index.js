@@ -30,6 +30,22 @@ class ProxyServer {
       await connectDb(mongoUri);
       await usersMongo.refreshSecretsCache();
       console.log('✅ MongoDB подключена, кэш секретов обновлён');
+      
+      // Создаём тестового пользователя, если база пустая
+      const existingUsers = await usersMongo.listUsers(false);
+      if (existingUsers.length === 0) {
+        const testUser = await usersMongo.addUser({
+          telegramId: '000000000',
+          username: 'test',
+          expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // +1 год
+          enabled: true,
+        });
+        // Обновляем кэш секретов после создания пользователя
+        await usersMongo.refreshSecretsCache();
+        console.log(`✅ Создан тестовый пользователь для проверки MTProto`);
+        console.log(`   Secret: ${testUser.secret}`);
+        console.log(`   Ссылка: https://t.me/proxy?server=${publicIp}&port=${config.mtproto?.port || 8444}&secret=${testUser.secret}`);
+      }
     }
 
     // Запуск MTProto прокси для Telegram
@@ -52,7 +68,18 @@ class ProxyServer {
       console.log(`✅ MTProto прокси запущен на порту ${config.mtproto.port} (для Telegram)`);
       if (useMultiUser) {
         const count = usersMongo.getEnabledSecretsSync().length;
-        console.log(`   Режим: мультипользователь (MongoDB), активных секретов: ${count}. Ссылки — через API.`);
+        if (count === 0) {
+          console.log(`   Режим: мультипользователь (MongoDB), активных секретов: 0.`);
+          console.log(`   ⚠️  Создайте пользователей через API для работы прокси.`);
+        } else {
+          console.log(`   Режим: мультипользователь (MongoDB), активных секретов: ${count}.`);
+          // Показываем ссылку первого активного пользователя для тестирования
+          const firstSecret = usersMongo.getEnabledSecretsSync()[0];
+          if (firstSecret) {
+            console.log(`   Тестовая ссылка: https://t.me/proxy?server=${publicIp}&port=${config.mtproto.port}&secret=${firstSecret}`);
+            console.log(`   Для получения всех ссылок используйте API: GET /api/users/{id}/link`);
+          }
+        }
       } else {
         const mtSecret = this.mtprotoServer.getSecret();
         console.log(`   Secret: ${mtSecret}`);

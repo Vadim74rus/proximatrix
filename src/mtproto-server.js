@@ -140,8 +140,13 @@ class MTProtoServer {
 
       const secretsList = this.getSecretList();
       if (secretsList.length === 0) {
-        reject(new Error('MTProto: нужен хотя бы один секрет (config или getSecrets)'));
-        return;
+        // В мультипользовательском режиме разрешаем запуск без секретов (пользователи будут созданы через API)
+        if (this.options.getSecrets) {
+          console.log('⚠️  MTProto: нет активных секретов. Сервер запущен, но пользователи должны быть созданы через API.');
+        } else {
+          reject(new Error('MTProto: нужен хотя бы один секрет (config или getSecrets)'));
+          return;
+        }
       }
 
       // Поддерживаем пул соединений к Telegram DC
@@ -189,6 +194,12 @@ class MTProtoServer {
             data.copy(buf64);
 
             const secretsList = this.getSecretList();
+            if (secretsList.length === 0) {
+              // В мультипользовательском режиме нет активных секретов - отклоняем соединение
+              socket.destroy();
+              return;
+            }
+            
             let matched = false;
             for (const secretHex of secretsList) {
               const binSecret = Buffer.from(secretHex, 'hex');
