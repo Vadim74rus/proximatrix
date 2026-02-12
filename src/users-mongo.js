@@ -60,6 +60,10 @@ async function addUser(data = {}) {
     expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
     enabled: data.enabled !== false,
     createdAt: now,
+    allowedIPs: [], // Разрешенные IP адреса
+    connectionHistory: [], // История подключений
+    lastConnectionIP: null,
+    lastConnectionTime: null,
   };
   const r = await col.insertOne(doc);
   doc._id = r.insertedId;
@@ -121,6 +125,68 @@ async function listUsers(maskSecret = true) {
   }));
 }
 
+async function getUserBySecret(secret) {
+  const col = getCollection();
+  const doc = await col.findOne({ secret: secret });
+  return doc ? toUser(doc) : null;
+}
+
+async function logConnection(secret, ip, status, reason = null) {
+  const col = getCollection();
+  const user = await col.findOne({ secret: secret });
+  if (!user) return;
+
+  const now = new Date();
+  const logEntry = {
+    ip: ip,
+    status: status, // 'connected', 'disconnected', 'blocked'
+    reason: reason,
+    timestamp: now,
+  };
+
+  // Добавляем в историю (храним последние 100 записей)
+  const history = user.connectionHistory || [];
+  history.push(logEntry);
+  if (history.length > 100) {
+    history.shift(); // Удаляем старые записи
+  }
+
+  const update = {
+    connectionHistory: history,
+    lastConnectionIP: ip,
+    lastConnectionTime: now,
+  };
+
+  // Если это первое подключение, добавляем IP в разрешенные
+  if (status === 'connected' && (!user.allowedIPs || user.allowedIPs.length === 0)) {
+    update.allowedIPs = [ip];
+  }
+
+  await col.updateOne({ _id: user._id }, { $set: update });
+}
+
+async function getConnectionHistory(userId, limit = 50) {
+  const col = getCollection();
+  const oid = ObjectId.isValid(userId) ? new ObjectId(userId) : null;
+  if (!oid) return null;
+  
+  const doc = await col.findOne({ _id: oid }, { projection: { connectionHistory: 1 } });
+  if (!doc) return null;
+  
+  const history = (doc.connectionHistory || []).slice(-limit);
+  return history.reverse(); // Новые сверху
+}
+
+async function resetAllowedIPs(userId) {
+  const col = getCollection();
+  const oid = ObjectId.isValid(userId) ? new ObjectId(userId) : null;
+  if (!oid) return null;
+  
+  await col.updateOne({ _id: oid }, { $set: { allowedIPs: [] } });
+  const doc = await col.findOne({ _id: oid });
+  return doc ? toUser(doc) : null;
+}
+
 function toUser(doc) {
   return {
     id: doc._id.toString(),
@@ -131,6 +197,10 @@ function toUser(doc) {
     expiresAt: doc.expiresAt,
     enabled: doc.enabled,
     createdAt: doc.createdAt,
+    allowedIPs: doc.allowedIPs || [],
+    connectionHistory: doc.connectionHistory ? doc.connectionHistory.slice(-10) : [], // Последние 10 для списка
+    lastConnectionIP: doc.lastConnectionIP,
+    lastConnectionTime: doc.lastConnectionTime,
   };
 }
 
@@ -143,6 +213,10 @@ module.exports = {
   setEnabled,
   deleteUser,
   getUser,
+  getUserBySecret,
   listUsers,
   generateSecret,
+  logConnection,
+  getConnectionHistory,
+  resetAllowedIPs,
 };

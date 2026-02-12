@@ -126,6 +126,23 @@ function createServer(options = {}) {
         return send(res, 200, { id, enabled: true });
       }
 
+      const connectionsMatch = pathname.match(/^\/api\/users\/([^/]+)\/connections$/);
+      if (connectionsMatch && method === 'GET') {
+        const id = connectionsMatch[1];
+        const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+        const history = await usersMongo.getConnectionHistory(id, limit);
+        if (history === null) return send(res, 404, { error: 'User not found' });
+        return send(res, 200, { userId: id, connections: history });
+      }
+
+      const resetIPsMatch = pathname.match(/^\/api\/users\/([^/]+)\/reset-ips$/);
+      if (resetIPsMatch && method === 'POST') {
+        const id = resetIPsMatch[1];
+        const u = await usersMongo.resetAllowedIPs(id);
+        if (!u) return send(res, 404, { error: 'User not found' });
+        return send(res, 200, { id, message: 'Allowed IPs reset', allowedIPs: u.allowedIPs });
+      }
+
       send(res, 404, { error: 'Not found' });
     } catch (err) {
       console.error('API Error:', err);

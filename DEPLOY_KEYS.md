@@ -12,6 +12,8 @@
 | **MongoDB пароль** | `changeme_proximatrix_2026` | docker-compose: `MONGO_INITDB_ROOT_PASSWORD` |
 | **API-ключ** | `proximatrix-api-key-change-in-production` | docker-compose: `PROXY_API_KEY` или config.json `api.apiKey` |
 | **Публичный IP** | `77.221.156.12` | docker-compose: `PROXY_PUBLIC_IP` или config.json `mtproto.publicIp` |
+| **URL API уведомлений** | `https://blacknetiv.ru` | docker-compose: `NOTIFY_API_URL` |
+| **Секрет для уведомлений** | (не задан) | docker-compose: `NOTIFY_SECRET` |
 
 ---
 

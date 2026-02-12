@@ -6,6 +6,7 @@
 
 const net = require('net');
 const crypto = require('crypto');
+const connectionTracker = require('./connection-tracker');
 
 // Telegram Data Center серверы (порт 443)
 const TELEGRAM_SERVERS = [
@@ -37,6 +38,12 @@ class MTProtoServer {
     this.server = null;
     this.serverIdleCons = [];
     this.telegramIdleNum = TELEGRAM_SERVERS.map(() => MIN_IDLE_SERVERS);
+    this.onSuspiciousActivity = options.onSuspiciousActivity || null;
+
+    // Настраиваем callback для уведомлений
+    if (this.onSuspiciousActivity) {
+      connectionTracker.setNotificationCallback(this.onSuspiciousActivity);
+    }
 
     for (let i = 0; i < TELEGRAM_SERVERS.length; i++) {
       this.serverIdleCons[i] = [];
@@ -162,22 +169,35 @@ class MTProtoServer {
 
       this.server = net.createServer((socket) => {
         socket.setTimeout(CON_TIMEOUT);
+        
+        // Получаем IP адрес клиента
+        const clientIP = socket.remoteAddress || 'unknown';
+        let matchedSecret = null;
 
-        socket.on('error', () => {
+        socket.on('error', async () => {
+          if (matchedSecret) {
+            await connectionTracker.unregisterConnection(matchedSecret, clientIP);
+          }
           socket.destroy();
         });
 
-        socket.on('timeout', () => {
+        socket.on('timeout', async () => {
+          if (matchedSecret) {
+            await connectionTracker.unregisterConnection(matchedSecret, clientIP);
+          }
           socket.destroy();
         });
 
-        socket.on('end', () => {
+        socket.on('end', async () => {
+          if (matchedSecret) {
+            await connectionTracker.unregisterConnection(matchedSecret, clientIP);
+          }
           if (socket.serverSocket != null) {
             socket.serverSocket.destroy();
           }
         });
 
-        socket.on('data', (data) => {
+        socket.on('data', async (data) => {
           // Защита от сканирования
           if (socket.init == null && (data.length === 41 || data.length === 56)) {
             socket.destroy();
@@ -234,11 +254,20 @@ class MTProtoServer {
               if (dcId > 4 || dcId < 0) valid = false;
 
               if (valid) {
+                // Проверяем разрешение на подключение через connection tracker
+                const checkResult = await connectionTracker.registerConnection(secretHex, clientIP);
+                if (!checkResult.allowed) {
+                  console.log(`🚫 Подключение отклонено для секрета ${secretHex.slice(0, 8)}... с IP ${clientIP}: ${checkResult.reason}`);
+                  socket.destroy();
+                  return;
+                }
+                
                 socket.cipherDecClient = cipherDec;
                 socket.cipherEncClient = crypto.createCipheriv('aes-256-ctr', encryptKeyClient, encryptIvClient);
                 socket.dcId = dcId;
                 data = data.slice(64, data.length);
                 socket.init = true;
+                matchedSecret = secretHex;
                 matched = true;
                 break;
               }

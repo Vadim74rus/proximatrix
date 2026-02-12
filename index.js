@@ -7,6 +7,7 @@ const { HttpProxyServer } = require('./src/http-proxy-server');
 const { connect: connectDb } = require('./src/db');
 const usersMongo = require('./src/users-mongo');
 const { start: startAdminApi } = require('./src/admin-api');
+const notifyService = require('./src/notify-service');
 const config = require('./config.json');
 
 class ProxyServer {
@@ -57,6 +58,24 @@ class ProxyServer {
       };
       if (useMultiUser) {
         opts.getSecrets = () => usersMongo.getEnabledSecretsSync();
+        // Callback для уведомлений о подозрительной активности
+        opts.onSuspiciousActivity = async (info) => {
+          console.log('\n🚨 ============================================');
+          console.log('🚨 ПОДОЗРИТЕЛЬНАЯ АКТИВНОСТЬ ОБНАРУЖЕНА!');
+          console.log('🚨 ============================================');
+          console.log(`Пользователь ID: ${info.userId}`);
+          console.log(`Username: ${info.username || 'N/A'}`);
+          console.log(`Telegram ID: ${info.telegramId || 'N/A'}`);
+          console.log(`Секрет: ${info.secret.slice(0, 8)}...`);
+          console.log(`Новый IP: ${info.ip}`);
+          console.log(`Существующие IP: ${info.existingIPs.join(', ')}`);
+          console.log(`Причина: ${info.reason}`);
+          console.log(`Действие: Пользователь автоматически отключен`);
+          console.log('🚨 ============================================\n');
+          
+          // Отправляем уведомление администратору через внешний API
+          await notifyService.notifySuspiciousActivity(info);
+        };
       } else {
         const secret = config.mtproto.secret && config.mtproto.secret.length === 32
           ? config.mtproto.secret
