@@ -194,6 +194,11 @@ ufw allow 8443/tcp comment 'HTTPS для WhatsApp'
 
 **Команда 5:**
 ```bash
+ufw allow 9090/tcp comment 'API управления пользователями'
+```
+
+**Команда 6:**
+```bash
 ufw --force enable
 ```
 
@@ -202,7 +207,7 @@ ufw --force enable
 ufw status
 ```
 
-Вы должны увидеть открытые порты 8444, 1080, 8080, 8443. ✅
+Вы должны увидеть открытые порты 8444, 1080, 8080, 8443, 9090. ✅
 
 ---
 
@@ -477,7 +482,30 @@ curl --proxy http://77.221.156.12:8080 http://ifconfig.me
 
 Должен вернуться IP адрес сервера `77.221.156.12`. ✅
 
-### 8.4. Проверка веб-интерфейса
+### 8.4. Проверка API управления пользователями
+
+**🖥️ НА СЕРВЕРЕ** (в окне PuTTY):
+
+```bash
+curl -H "X-API-Key: proximatrix-api-key-change-in-production" http://localhost:9090/api/users
+```
+
+Должен вернуться JSON: `{"users":[]}` или список пользователей. ✅
+
+**💻 НА ВАШЕМ КОМПЬЮТЕРЕ:**
+
+```powershell
+$headers = @{
+    "X-API-Key" = "proximatrix-api-key-change-in-production"
+}
+Invoke-RestMethod -Uri "http://77.221.156.12:9090/api/users" -Headers $headers
+```
+
+Должен вернуться список пользователей (пустой массив, если пользователей нет). ✅
+
+**Если API недоступен**, см. раздел "Решение проблем" ниже или используйте скрипт `fix-api-connection.sh`.
+
+### 8.5. Проверка веб-интерфейса
 
 **💻 НА ВАШЕМ КОМПЬЮТЕРЕ:**
 
@@ -729,6 +757,68 @@ chown -R root:root /opt/proximatrix
 - Проверьте, что порты **8080** и **8443** открыты
 - Попробуйте использовать HTTPS прокси вместо HTTP
 - Проверьте логи: `docker compose logs proximatrix` (на сервере)
+
+### API недоступен (ошибка "ECONNREFUSED" или "fetch failed")
+
+**🖥️ НА СЕРВЕРЕ** (в окне PuTTY):
+
+**Быстрое решение — используйте скрипт:**
+
+```bash
+cd /opt/proximatrix
+chmod +x fix-api-connection.sh
+./fix-api-connection.sh
+```
+
+**Или вручную:**
+
+1. **Проверьте, что контейнер запущен:**
+   ```bash
+   docker compose ps
+   ```
+
+2. **Откройте порт 9090 в UFW:**
+   ```bash
+   ufw allow 9090/tcp
+   ufw reload
+   ufw status | grep 9090
+   ```
+
+3. **Проверьте логи API:**
+   ```bash
+   docker compose logs proximatrix | grep -i api
+   ```
+   Должна быть строка: `✅ API управления пользователями: http://0.0.0.0:9090`
+
+4. **Перезапустите контейнер:**
+   ```bash
+   docker compose restart proximatrix
+   ```
+
+5. **Проверьте доступность:**
+   ```bash
+   curl -H "X-API-Key: proximatrix-api-key-change-in-production" http://localhost:9090/api/users
+   ```
+
+**💻 НА ВАШЕМ КОМПЬЮТЕРЕ:**
+
+Если порт всё ещё недоступен с другого сервера:
+
+1. **Проверьте доступность порта:**
+   ```powershell
+   Test-NetConnection -ComputerName 77.221.156.12 -Port 9090
+   ```
+
+2. Если **TcpTestSucceeded: False** — откройте порт **9090** в панели хостинга (управление сервером).
+
+3. **Проверьте правильность настроек в `.env` на вашем боте/сервере:**
+   ```env
+   PROXY_API_URL=http://77.221.156.12:9090
+   PROXY_API_KEY=proximatrix-api-key-change-in-production
+   ```
+   Ключ должен совпадать с `PROXY_API_KEY` в `docker-compose.yml`.
+
+📖 **Подробная инструкция:** См. [CONNECT_FROM_OTHER_SERVER.md](CONNECT_FROM_OTHER_SERVER.md)
 
 ---
 
