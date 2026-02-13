@@ -147,8 +147,7 @@ class MTProtoServer {
 
       const secretsList = this.getSecretList();
       if (secretsList.length === 0) {
-        // В мультипользовательском режиме разрешаем запуск без секретов (пользователи будут созданы через API)
-        if (this.options.getSecrets) {
+        if (this.getSecrets && typeof this.getSecrets === 'function') {
           console.log('⚠️  MTProto: нет активных секретов. Сервер запущен, но пользователи должны быть созданы через API.');
         } else {
           reject(new Error('MTProto: нужен хотя бы один секрет (config или getSecrets)'));
@@ -167,34 +166,30 @@ class MTProtoServer {
       setInterval(maintainPool, 100);
       maintainPool();
 
+      const normalizeIP = (addr) => {
+        if (!addr) return 'unknown';
+        if (addr.startsWith('::ffff:')) return addr.slice(7);
+        return addr;
+      };
+
       this.server = net.createServer((socket) => {
         socket.setTimeout(CON_TIMEOUT);
-        
-        // Получаем IP адрес клиента
-        const clientIP = socket.remoteAddress || 'unknown';
+        const clientIP = normalizeIP(socket.remoteAddress) || 'unknown';
         let matchedSecret = null;
 
-        socket.on('error', async () => {
-          if (matchedSecret) {
-            await connectionTracker.unregisterConnection(matchedSecret, clientIP);
-          }
+        socket.on('error', () => {
+          if (matchedSecret) connectionTracker.unregisterConnection(matchedSecret, clientIP);
           socket.destroy();
         });
 
-        socket.on('timeout', async () => {
-          if (matchedSecret) {
-            await connectionTracker.unregisterConnection(matchedSecret, clientIP);
-          }
+        socket.on('timeout', () => {
+          if (matchedSecret) connectionTracker.unregisterConnection(matchedSecret, clientIP);
           socket.destroy();
         });
 
-        socket.on('end', async () => {
-          if (matchedSecret) {
-            await connectionTracker.unregisterConnection(matchedSecret, clientIP);
-          }
-          if (socket.serverSocket != null) {
-            socket.serverSocket.destroy();
-          }
+        socket.on('end', () => {
+          if (matchedSecret) connectionTracker.unregisterConnection(matchedSecret, clientIP);
+          if (socket.serverSocket != null) socket.serverSocket.destroy();
         });
 
         socket.on('data', async (data) => {

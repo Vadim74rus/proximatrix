@@ -73,8 +73,10 @@ class ProxyServer {
           console.log(`Действие: Пользователь автоматически отключен`);
           console.log('🚨 ============================================\n');
           
-          // Отправляем уведомление администратору через внешний API
-          await notifyService.notifySuspiciousActivity(info);
+          // Отправляем уведомление администратору (не блокируем основной поток)
+          notifyService.notifySuspiciousActivity(info).catch(err => {
+            console.error('❌ Ошибка отправки уведомления:', err.message);
+          });
         };
       } else {
         const secret = config.mtproto.secret && config.mtproto.secret.length === 32
@@ -193,18 +195,33 @@ class ProxyServer {
   }
 }
 
-// Обработка сигналов завершения
+// Обработка необработанных отклонений промисов (отказоустойчивость)
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection:', reason);
+});
+
+// Обработка сигналов завершения (graceful shutdown)
 const server = new ProxyServer();
+let isShuttingDown = false;
 
-process.on('SIGINT', async () => {
-  await server.stop();
-  process.exit(0);
-});
+async function gracefulShutdown(signal) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  console.log(`\n📴 Получен сигнал ${signal}, остановка...`);
+  try {
+    await Promise.race([
+      server.stop(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Shutdown timeout')), 15000)),
+    ]);
+    process.exit(0);
+  } catch (err) {
+    console.error('❌ Ошибка при остановке:', err.message);
+    process.exit(1);
+  }
+}
 
-process.on('SIGTERM', async () => {
-  await server.stop();
-  process.exit(0);
-});
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 // Запуск сервера
 server.start().catch(err => {

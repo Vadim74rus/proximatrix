@@ -27,40 +27,34 @@ class ConnectionTracker {
     const ipSet = this.activeConnections.get(secret);
     const currentIPs = Array.from(ipSet);
 
-    // Проверяем, есть ли уже подключения с других IP
     if (currentIPs.length > 0 && !currentIPs.includes(ip)) {
-      // Обнаружено одновременное подключение с другого IP!
       console.log(`⚠️  Подозрительная активность: секрет ${secret.slice(0, 8)}... используется одновременно с IP: ${currentIPs.join(', ')} и ${ip}`);
-      
-      // Отключаем пользователя
-      const user = await usersMongo.getUserBySecret(secret);
-      if (user && user.enabled) {
-        await usersMongo.setEnabled(user.id, false);
-        await usersMongo.logConnection(secret, ip, 'blocked', 'Simultaneous connection from different IP');
-        
-        // Уведомление администратору
-        if (this.onSuspiciousActivity) {
-          this.onSuspiciousActivity({
-            userId: user.id,
-            username: user.username,
-            telegramId: user.telegramId,
-            secret: secret,
-            ip: ip,
-            existingIPs: currentIPs,
-            reason: 'Simultaneous connection from different IP',
-          });
+      try {
+        const user = await usersMongo.getUserBySecret(secret);
+        if (user && user.enabled) {
+          await usersMongo.setEnabled(user.id, false);
+          usersMongo.logConnection(secret, ip, 'blocked', 'Simultaneous connection from different IP').catch(() => {});
+          if (this.onSuspiciousActivity) {
+            this.onSuspiciousActivity({
+              userId: user.id,
+              username: user.username,
+              telegramId: user.telegramId,
+              secret: secret,
+              ip: ip,
+              existingIPs: currentIPs,
+              reason: 'Simultaneous connection from different IP',
+            });
+          }
+          return { allowed: false, reason: 'User disabled due to suspicious activity' };
         }
-        
-        return { allowed: false, reason: 'User disabled due to suspicious activity' };
+      } catch (err) {
+        console.error('⚠️  Ошибка при отключении пользователя:', err.message);
+        return { allowed: false, reason: 'Internal error' };
       }
     }
 
-    // Разрешаем подключение и добавляем IP
     ipSet.add(ip);
-    
-    // Логируем подключение
-    await usersMongo.logConnection(secret, ip, 'connected');
-    
+    usersMongo.logConnection(secret, ip, 'connected').catch(() => {});
     return { allowed: true };
   }
 
@@ -69,18 +63,14 @@ class ConnectionTracker {
    * @param {string} secret - Секрет MTProto
    * @param {string} ip - IP адрес клиента
    */
-  async unregisterConnection(secret, ip) {
+  unregisterConnection(secret, ip) {
     if (this.activeConnections.has(secret)) {
       const ipSet = this.activeConnections.get(secret);
       ipSet.delete(ip);
-      
-      // Если больше нет активных подключений, удаляем запись
       if (ipSet.size === 0) {
         this.activeConnections.delete(secret);
       }
-      
-      // Логируем отключение
-      await usersMongo.logConnection(secret, ip, 'disconnected');
+      usersMongo.logConnection(secret, ip, 'disconnected').catch(() => {});
     }
   }
 

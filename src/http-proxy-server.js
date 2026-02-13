@@ -3,6 +3,10 @@ const https = require('https');
 const net = require('net');
 const { URL } = require('url');
 
+const CONNECT_LOG_ENABLED = process.env.PROXY_LOG_CONNECT !== '0';
+const PROXY_REQUEST_TIMEOUT = parseInt(process.env.PROXY_REQUEST_TIMEOUT || '60000', 10) || 60000;
+const SOCKET_TIMEOUT = parseInt(process.env.PROXY_SOCKET_TIMEOUT || '120000', 10) || 120000;
+
 class HttpProxyServer {
   constructor(options = {}) {
     this.port = options.port || 8080;
@@ -85,14 +89,17 @@ class HttpProxyServer {
         port: url.port || (url.protocol === 'https:' ? 443 : 80),
         path: url.pathname + url.search,
         method: req.method,
-        headers: req.headers
+        headers: req.headers,
       };
 
       const protocol = url.protocol === 'https:' ? https : http;
-      
       const proxyReq = protocol.request(options, (proxyRes) => {
         res.writeHead(proxyRes.statusCode, proxyRes.headers);
         proxyRes.pipe(res);
+      });
+
+      proxyReq.setTimeout(PROXY_REQUEST_TIMEOUT, () => {
+        proxyReq.destroy();
       });
 
       proxyReq.on('error', (err) => {
@@ -110,28 +117,33 @@ class HttpProxyServer {
   }
 
   handleConnect(req, socket, head) {
-    // Обработка HTTPS туннелирования (CONNECT метод)
     const url = req.url.split(':');
     const targetHost = url[0];
-    const targetPort = parseInt(url[1] || 443);
+    const targetPort = parseInt(url[1] || 443, 10);
 
-    console.log(`🔗 CONNECT ${targetHost}:${targetPort}`);
+    if (CONNECT_LOG_ENABLED) {
+      console.log(`🔗 CONNECT ${targetHost}:${targetPort}`);
+    }
 
-    const targetSocket = net.createConnection(targetPort, targetHost, () => {
+    socket.setTimeout(SOCKET_TIMEOUT);
+    const targetSocket = net.createConnection({ port: targetPort, host: targetHost }, () => {
       socket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
       targetSocket.write(head);
       socket.pipe(targetSocket);
       targetSocket.pipe(socket);
     });
 
+    targetSocket.setTimeout(SOCKET_TIMEOUT);
+
     targetSocket.on('error', (err) => {
-      console.error(`❌ HTTPS Proxy Connection Error (${targetHost}:${targetPort}):`, err.message);
-      socket.write('HTTP/1.1 502 Bad Gateway\r\n\r\n');
-      socket.end();
+      if (CONNECT_LOG_ENABLED) {
+        console.error(`❌ HTTPS Proxy Connection Error (${targetHost}:${targetPort}):`, err.message);
+      }
+      try { socket.write('HTTP/1.1 502 Bad Gateway\r\n\r\n'); socket.end(); } catch (_) {}
+      targetSocket.destroy();
     });
 
-    socket.on('error', (err) => {
-      console.error('❌ HTTPS Proxy Socket Error:', err);
+    socket.on('error', () => {
       targetSocket.destroy();
     });
 
@@ -140,7 +152,7 @@ class HttpProxyServer {
     });
 
     targetSocket.on('close', () => {
-      socket.destroy();
+      try { socket.destroy(); } catch (_) {}
     });
   }
 

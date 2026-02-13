@@ -20,13 +20,14 @@ class NotifyService {
    */
   async sendNotification(message, subject = null) {
     if (!this.enabled) {
-      console.log('⚠️  Уведомления отключены (не заданы NOTIFY_API_URL или NOTIFY_SECRET)');
       return { ok: false, error: 'Notifications disabled' };
     }
 
     if (!message || !message.trim()) {
       return { ok: false, error: 'Message is required' };
     }
+
+    const NOTIFY_TIMEOUT = 10000; // 10 s
 
     try {
       const url = new URL(this.apiUrl);
@@ -40,7 +41,7 @@ class NotifyService {
       const options = {
         hostname: url.hostname,
         port: url.port || (isHttps ? 443 : 80),
-        path: url.pathname + (url.pathname.endsWith('/') ? 'api/notify/admin' : '/api/notify/admin'),
+        path: (url.pathname || '/').replace(/\/+$/, '') + '/api/notify/admin',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -54,23 +55,30 @@ class NotifyService {
           let data = '';
           res.on('data', (chunk) => { data += chunk; });
           res.on('end', () => {
+            clearTimeout(timer);
             if (res.statusCode === 200) {
               try {
                 const result = JSON.parse(data);
-                console.log(`✅ Уведомление отправлено администратору: ${result.sentTo || 1} получателей`);
+                console.log(`✅ Уведомление отправлено: ${result.sentTo || 1} получателей`);
                 resolve({ ok: true, result });
               } catch {
                 resolve({ ok: true });
               }
             } else {
-              console.error(`❌ Ошибка отправки уведомления: HTTP ${res.statusCode}`);
+              console.error(`❌ Уведомление: HTTP ${res.statusCode}`);
               resolve({ ok: false, error: `HTTP ${res.statusCode}` });
             }
           });
         });
 
+        const timer = setTimeout(() => {
+          req.destroy();
+          resolve({ ok: false, error: 'Timeout' });
+        }, NOTIFY_TIMEOUT);
+
         req.on('error', (err) => {
-          console.error(`❌ Ошибка отправки уведомления: ${err.message}`);
+          clearTimeout(timer);
+          console.error(`❌ Уведомление: ${err.message}`);
           resolve({ ok: false, error: err.message });
         });
 
@@ -78,7 +86,7 @@ class NotifyService {
         req.end();
       });
     } catch (err) {
-      console.error(`❌ Ошибка отправки уведомления: ${err.message}`);
+      console.error(`❌ Уведомление: ${err.message}`);
       return { ok: false, error: err.message };
     }
   }

@@ -6,10 +6,21 @@
 const http = require('http');
 const usersMongo = require('./users-mongo');
 
+const MAX_BODY_SIZE = 1024 * 256; // 256 KB
+
 function parseBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', chunk => { body += chunk; });
+    let size = 0;
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > MAX_BODY_SIZE) {
+        req.destroy();
+        reject(new Error('Request body too large'));
+        return;
+      }
+      body += chunk;
+    });
     req.on('end', () => {
       try {
         resolve(body ? JSON.parse(body) : {});
@@ -145,8 +156,10 @@ function createServer(options = {}) {
 
       send(res, 404, { error: 'Not found' });
     } catch (err) {
-      console.error('API Error:', err);
-      send(res, 500, { error: err.message || 'Internal error' });
+      console.error('API Error:', err.message);
+      send(res, err.message === 'Request body too large' ? 413 : 500, {
+        error: err.message === 'Request body too large' ? 'Request body too large' : (err.message || 'Internal error'),
+      });
     }
   });
 
@@ -156,6 +169,8 @@ function createServer(options = {}) {
 function start(options) {
   return new Promise((resolve, reject) => {
     const server = createServer(options);
+    server.keepAliveTimeout = 65000;
+    server.headersTimeout = 66000;
     server.listen(options.port || 9090, options.host || '0.0.0.0', () => resolve(server));
     server.on('error', reject);
   });

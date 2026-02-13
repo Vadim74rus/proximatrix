@@ -10,7 +10,13 @@ let db = null;
 
 async function connect(uri) {
   if (db) return db;
-  client = new MongoClient(uri, { maxPoolSize: 10 });
+  client = new MongoClient(uri, {
+    maxPoolSize: 20,
+    minPoolSize: 2,
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
+    maxIdleTimeMS: 60000,
+  });
   await client.connect();
   const match = uri.match(/\/([^/?]+)(\?|$)/);
   const dbName = (match && match[1] && match[1] !== 'admin') ? match[1] : 'proximatrix';

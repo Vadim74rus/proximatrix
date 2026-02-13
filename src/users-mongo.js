@@ -24,20 +24,26 @@ function getCollection() {
 }
 
 async function refreshSecretsCache() {
-  const col = getCollection();
-  const now = new Date();
-  const list = await col.find({
-    enabled: { $ne: false },
-    secret: { $exists: true, $ne: '' },
-    $or: [
-      { expiresAt: { $exists: false } },
-      { expiresAt: null },
-      { expiresAt: { $gt: now } },
-    ],
-  }).project({ secret: 1 }).toArray();
-  secretsCache = list.map((d) => d.secret).filter(Boolean);
-  cacheValid = true;
-  return secretsCache;
+  try {
+    const col = getCollection();
+    const now = new Date();
+    const list = await col.find({
+      enabled: { $ne: false },
+      secret: { $exists: true, $ne: '' },
+      $or: [
+        { expiresAt: { $exists: false } },
+        { expiresAt: null },
+        { expiresAt: { $gt: now } },
+      ],
+    }).project({ secret: 1 }).toArray();
+    secretsCache = list.map((d) => d.secret).filter(Boolean);
+    cacheValid = true;
+    return secretsCache;
+  } catch (err) {
+    console.error('⚠️  Ошибка обновления кэша секретов:', err.message);
+    cacheValid = false;
+    return secretsCache;
+  }
 }
 
 function getEnabledSecretsSync() {
@@ -46,7 +52,11 @@ function getEnabledSecretsSync() {
 
 async function invalidateCache() {
   cacheValid = false;
-  await refreshSecretsCache();
+  try {
+    await refreshSecretsCache();
+  } catch (_) {
+    // При ошибке оставляем старый кэш до следующей успешной попытки
+  }
 }
 
 async function addUser(data = {}) {
