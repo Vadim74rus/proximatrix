@@ -50,6 +50,7 @@ docker compose restart proximatrix
    ```
    [🚨 Подозрительная активность MTProxy]
    Пользователь ID: ...
+   Имя: ...
    Username: ...
    Telegram ID: ...
    Секрет: ...
@@ -85,13 +86,15 @@ environment:
 **Тело сообщения:**
 ```
 Пользователь ID: {userId}
+Имя: {firstname}
 Username: {username}
 Telegram ID: {telegramId}
 Секрет: {secret первые 8 символов}...
 Новый IP: {ip}
 Существующие IP: {existingIPs через запятую}
 Причина: {reason}
-Действие: Пользователь автоматически отключен
+
+Решение за вами. При необходимости отключите: POST /api/users/{userId}/disable
 ```
 
 ---

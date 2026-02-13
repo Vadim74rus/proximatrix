@@ -64,6 +64,7 @@ class ProxyServer {
           console.log('🚨 ПОДОЗРИТЕЛЬНАЯ АКТИВНОСТЬ ОБНАРУЖЕНА!');
           console.log('🚨 ============================================');
           console.log(`Пользователь ID: ${info.userId}`);
+          console.log(`Имя: ${info.firstname || 'N/A'}`);
           console.log(`Username: ${info.username || 'N/A'}`);
           console.log(`Telegram ID: ${info.telegramId || 'N/A'}`);
           console.log(`Секрет: ${info.secret.slice(0, 8)}...`);

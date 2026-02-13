@@ -99,6 +99,7 @@ class NotifyService {
     const subject = '🚨 Подозрительная активность MTProxy';
     const message = [
       `Пользователь ID: ${info.userId}`,
+      `Имя: ${info.firstname || 'N/A'}`,
       `Username: ${info.username || 'N/A'}`,
       `Telegram ID: ${info.telegramId || 'N/A'}`,
       `Секрет: ${info.secret.slice(0, 8)}...`,

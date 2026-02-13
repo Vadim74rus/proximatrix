@@ -217,8 +217,15 @@ class MTProtoServer {
             
             let matched = false;
             for (const secretHex of secretsList) {
+              if (!secretHex || typeof secretHex !== 'string' || secretHex.length !== 32) {
+                console.warn(`⚠️  Неверный формат секрета: ${secretHex ? secretHex.slice(0, 8) + '...' : 'null'} (ожидается 32 hex символа)`);
+                continue;
+              }
               const binSecret = Buffer.from(secretHex, 'hex');
-              if (binSecret.length !== 16) continue;
+              if (binSecret.length !== 16) {
+                console.warn(`⚠️  Секрет не декодируется в 16 байт: ${secretHex.slice(0, 8)}... (длина hex: ${secretHex.length})`);
+                continue;
+              }
 
               let keyIv = Buffer.allocUnsafe(48);
               buf64.copy(keyIv, 0, 8);

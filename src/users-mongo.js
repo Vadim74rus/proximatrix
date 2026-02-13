@@ -36,8 +36,14 @@ async function refreshSecretsCache() {
         { expiresAt: { $gt: now } },
       ],
     }).project({ secret: 1 }).toArray();
-    secretsCache = list.map((d) => d.secret).filter(Boolean);
+    secretsCache = list
+      .map((d) => d.secret)
+      .filter(Boolean)
+      .filter((s) => typeof s === 'string' && s.length === 32 && /^[0-9a-f]{32}$/i.test(s));
     cacheValid = true;
+    if (list.length > secretsCache.length) {
+      console.warn(`⚠️  Отфильтровано ${list.length - secretsCache.length} неверных секретов из ${list.length}`);
+    }
     return secretsCache;
   } catch (err) {
     console.error('⚠️  Ошибка обновления кэша секретов:', err.message);
@@ -47,6 +53,13 @@ async function refreshSecretsCache() {
 }
 
 function getEnabledSecretsSync() {
+  if (!cacheValid) {
+    console.warn('⚠️  Кэш секретов невалиден, выполняется синхронное обновление...');
+    // Попытка синхронного обновления (может не сработать, если БД недоступна)
+    refreshSecretsCache().catch(err => {
+      console.error('❌ Ошибка синхронного обновления кэша:', err.message);
+    });
+  }
   return secretsCache;
 }
 
@@ -62,10 +75,21 @@ async function invalidateCache() {
 async function addUser(data = {}) {
   const col = getCollection();
   const now = new Date();
+  
+  // Генерируем секрет, если не передан или неверного формата
+  let secret = data.secret;
+  if (!secret || typeof secret !== 'string' || secret.length !== 32 || !/^[0-9a-f]{32}$/i.test(secret)) {
+    secret = generateSecret();
+    if (data.secret) {
+      console.warn(`⚠️  Передан неверный секрет, сгенерирован новый: ${secret.slice(0, 8)}...`);
+    }
+  }
+  
   const doc = {
     telegramId: data.telegramId != null ? String(data.telegramId) : null,
     username: data.username != null ? String(data.username) : (data.name || '') || null,
-    secret: data.secret || generateSecret(),
+    firstname: data.firstname != null ? String(data.firstname) : null,
+    secret: secret,
     activatedAt: data.activatedAt ? new Date(data.activatedAt) : now,
     expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
     enabled: data.enabled !== false,
@@ -78,6 +102,14 @@ async function addUser(data = {}) {
   const r = await col.insertOne(doc);
   doc._id = r.insertedId;
   doc.id = doc._id.toString();
+  
+  // Проверяем, что секрет корректно сохранен
+  if (!doc.secret || doc.secret.length !== 32 || !/^[0-9a-f]{32}$/i.test(doc.secret)) {
+    console.error(`❌ КРИТИЧЕСКАЯ ОШИБКА: Пользователь ${doc.id} создан с неверным секретом: ${doc.secret ? doc.secret.slice(0, 8) + '...' : 'null'}`);
+  } else {
+    console.log(`✅ Пользователь создан: ID=${doc.id}, username=${doc.username || '(не указан)'}, secret=${doc.secret.slice(0, 8)}...`);
+  }
+  
   await invalidateCache();
   return doc;
 }
@@ -90,9 +122,20 @@ async function updateUser(id, updates) {
   if (updates.telegramId !== undefined) set.telegramId = String(updates.telegramId);
   if (updates.username !== undefined) set.username = String(updates.username);
   if (updates.name !== undefined) set.username = String(updates.name);
+  if (updates.firstname !== undefined) set.firstname = updates.firstname != null ? String(updates.firstname) : null;
   if (updates.activatedAt !== undefined) set.activatedAt = new Date(updates.activatedAt);
   if (updates.expiresAt !== undefined) set.expiresAt = updates.expiresAt == null ? null : new Date(updates.expiresAt);
   if (updates.enabled !== undefined) set.enabled = !!updates.enabled;
+  
+  // Валидация секрета при обновлении
+  if (updates.secret !== undefined) {
+    if (!updates.secret || typeof updates.secret !== 'string' || updates.secret.length !== 32 || !/^[0-9a-f]{32}$/i.test(updates.secret)) {
+      console.warn(`⚠️  Попытка обновить пользователя ${id} с неверным секретом, секрет не обновлен`);
+    } else {
+      set.secret = updates.secret;
+    }
+  }
+  
   const r = await col.updateOne({ _id: oid }, { $set: set });
   if (r.modifiedCount || r.matchedCount) await invalidateCache();
   const doc = await col.findOne({ _id: oid });
@@ -127,6 +170,7 @@ async function listUsers(maskSecret = true) {
     id: d._id.toString(),
     telegramId: d.telegramId,
     username: d.username,
+    firstname: d.firstname || null,
     secret: maskSecret && d.secret ? d.secret.slice(0, 8) + '…' : d.secret,
     activatedAt: d.activatedAt,
     expiresAt: d.expiresAt,
@@ -149,9 +193,12 @@ async function logConnection(secret, ip, status, reason = null) {
   const now = new Date();
   const logEntry = {
     ip: ip,
-    status: status, // 'connected', 'disconnected', 'blocked'
+    status: status, // 'connected', 'disconnected', 'suspicious', 'blocked'
     reason: reason,
     timestamp: now,
+    telegramId: user.telegramId || null,
+    firstname: user.firstname || null,
+    username: user.username || null,
   };
 
   // Добавляем в историю (храним последние 100 записей)
@@ -202,6 +249,7 @@ function toUser(doc) {
     id: doc._id.toString(),
     telegramId: doc.telegramId,
     username: doc.username,
+    firstname: doc.firstname || null,
     secret: doc.secret,
     activatedAt: doc.activatedAt,
     expiresAt: doc.expiresAt,

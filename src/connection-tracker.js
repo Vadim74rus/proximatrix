@@ -32,17 +32,20 @@ class ConnectionTracker {
       console.log(`⚠️  Подозрительная активность: секрет ${secret.slice(0, 8)}... используется одновременно с IP: ${currentIPs.join(', ')} и ${ip}`);
       try {
         const user = await usersMongo.getUserBySecret(secret);
-        if (user && this.onSuspiciousActivity) {
+        if (user) {
           usersMongo.logConnection(secret, ip, 'suspicious', 'Simultaneous connection from different IP').catch(() => {});
-          this.onSuspiciousActivity({
-            userId: user.id,
-            username: user.username,
-            telegramId: user.telegramId,
-            secret: secret,
-            ip: ip,
-            existingIPs: currentIPs,
-            reason: 'Simultaneous connection from different IP',
-          });
+          if (this.onSuspiciousActivity) {
+            this.onSuspiciousActivity({
+              userId: user.id,
+              username: user.username,
+              firstname: user.firstname,
+              telegramId: user.telegramId,
+              secret: secret,
+              ip: ip,
+              existingIPs: currentIPs,
+              reason: 'Simultaneous connection from different IP',
+            });
+          }
         }
       } catch (err) {
         console.error('⚠️  Ошибка при отправке уведомления о подозрительной активности:', err.message);

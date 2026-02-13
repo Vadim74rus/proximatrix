@@ -29,6 +29,7 @@ X-API-Key: ваш-секретный-ключ
 {
   "telegramId": "123456789",
   "username": "ivan",
+  "firstname": "Иван",
   "activatedAt": "2025-02-11",
   "expiresAt": "2026-02-11",
   "enabled": true
@@ -44,6 +45,7 @@ X-API-Key: ваш-секретный-ключ
   "id": "65a1b2c3d4e5f6789012345",
   "telegramId": "123456789",
   "username": "ivan",
+  "firstname": "Иван",
   "secret": "a1b2c3d4e5f6...",
   "link": "https://t.me/proxy?server=77.221.156.12&port=8444&secret=a1b2c3d4...",
   "activatedAt": "2025-02-11T00:00:00.000Z",
@@ -73,6 +75,7 @@ X-API-Key: ваш-секретный-ключ
       "id": "65a1b2c3d4e5f6789012345",
       "telegramId": "123456789",
       "username": "ivan",
+      "firstname": "Иван",
       "secret": "a1b2c3d4…",
       "activatedAt": "2025-02-11T00:00:00.000Z",
       "expiresAt": "2026-02-11T00:00:00.000Z",
@@ -128,6 +131,7 @@ X-API-Key: ваш-секретный-ключ
 {
   "telegramId": "123456789",
   "username": "new_username",
+  "firstname": "Новое Имя",
   "activatedAt": "2025-02-11",
   "expiresAt": "2026-03-11",
   "enabled": true
@@ -168,19 +172,27 @@ X-API-Key: ваш-секретный-ключ
       "ip": "192.168.1.100",
       "status": "connected",
       "reason": null,
-      "timestamp": "2025-02-11T12:30:00.000Z"
+      "timestamp": "2025-02-11T12:30:00.000Z",
+      "telegramId": "123456789",
+      "firstname": "Иван",
+      "username": "ivan"
     },
     {
       "ip": "10.0.0.50",
       "status": "suspicious",
       "reason": "Simultaneous connection from different IP",
-      "timestamp": "2025-02-11T12:25:00.000Z"
+      "timestamp": "2025-02-11T12:25:00.000Z",
+      "telegramId": "123456789",
+      "firstname": "Иван",
+      "username": "ivan"
     }
   ]
 }
 ```
 
 Статусы: `connected`, `disconnected`, `suspicious`, `blocked`.
+
+**Важно:** В истории подключений отображаются данные **владельца секрета** из базы данных (telegramId, firstname, username). Если секрет используется с разных IP, для всех IP будут показаны данные владельца секрета. MTProto прокси не передает информацию о реальном подключившемся пользователе.
 
 ---
 
@@ -237,7 +249,7 @@ X-API-Key: ваш-секретный-ключ
 curl -X POST http://77.221.156.12:9090/api/users \
   -H "Content-Type: application/json" \
   -H "X-API-Key: ваш-api-ключ" \
-  -d '{"telegramId":"123456789","username":"ivan","expiresAt":"2026-02-11"}'
+  -d '{"telegramId":"123456789","username":"ivan","firstname":"Иван","expiresAt":"2026-02-11"}'
 
 # Список
 curl -H "X-API-Key: ваш-api-ключ" http://77.221.156.12:9090/api/users
