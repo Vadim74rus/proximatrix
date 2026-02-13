@@ -105,7 +105,8 @@ class NotifyService {
       `Новый IP: ${info.ip}`,
       `Существующие IP: ${info.existingIPs.join(', ')}`,
       `Причина: ${info.reason}`,
-      `Действие: Пользователь автоматически отключен`,
+      ``,
+      `Решение за вами. При необходимости отключите: POST /api/users/${info.userId}/disable`,
     ].join('\n');
 
     return await this.sendNotification(message, subject);

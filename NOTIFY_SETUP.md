@@ -56,7 +56,8 @@ docker compose restart proximatrix
    Новый IP: ...
    Существующие IP: ...
    Причина: Simultaneous connection from different IP
-   Действие: Пользователь автоматически отключен
+
+   Решение за вами. При необходимости отключите: POST /api/users/{id}/disable
    ```
 
 ---

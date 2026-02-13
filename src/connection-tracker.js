@@ -1,20 +1,20 @@
 /**
- * Отслеживание подключений MTProto по IP и секретам
- * Автоматическое отключение при обнаружении одновременных подключений с разных IP
+ * Отслеживание подключений MTProto по IP и секретам.
+ * При одновременном использовании секрета с разных IP — только уведомление админу.
+ * Все подключения разрешаются, решение (отключить пользователя и т.д.) принимает администратор.
  */
 
 const usersMongo = require('./users-mongo');
 
 class ConnectionTracker {
   constructor() {
-    // Активные подключения: Map<secret, Set<ip>>
     this.activeConnections = new Map();
-    // Callback для уведомлений
     this.onSuspiciousActivity = null;
   }
 
   /**
-   * Регистрирует новое подключение
+   * Регистрирует новое подключение.
+   * При подозрительной активности (разные IP одновременно) — уведомление админу, подключение разрешается.
    * @param {string} secret - Секрет MTProto
    * @param {string} ip - IP адрес клиента
    * @returns {Promise<{allowed: boolean, reason?: string}>}
@@ -26,30 +26,26 @@ class ConnectionTracker {
 
     const ipSet = this.activeConnections.get(secret);
     const currentIPs = Array.from(ipSet);
+    const isSuspicious = currentIPs.length > 0 && !currentIPs.includes(ip);
 
-    if (currentIPs.length > 0 && !currentIPs.includes(ip)) {
+    if (isSuspicious) {
       console.log(`⚠️  Подозрительная активность: секрет ${secret.slice(0, 8)}... используется одновременно с IP: ${currentIPs.join(', ')} и ${ip}`);
       try {
         const user = await usersMongo.getUserBySecret(secret);
-        if (user && user.enabled) {
-          await usersMongo.setEnabled(user.id, false);
-          usersMongo.logConnection(secret, ip, 'blocked', 'Simultaneous connection from different IP').catch(() => {});
-          if (this.onSuspiciousActivity) {
-            this.onSuspiciousActivity({
-              userId: user.id,
-              username: user.username,
-              telegramId: user.telegramId,
-              secret: secret,
-              ip: ip,
-              existingIPs: currentIPs,
-              reason: 'Simultaneous connection from different IP',
-            });
-          }
-          return { allowed: false, reason: 'User disabled due to suspicious activity' };
+        if (user && this.onSuspiciousActivity) {
+          usersMongo.logConnection(secret, ip, 'suspicious', 'Simultaneous connection from different IP').catch(() => {});
+          this.onSuspiciousActivity({
+            userId: user.id,
+            username: user.username,
+            telegramId: user.telegramId,
+            secret: secret,
+            ip: ip,
+            existingIPs: currentIPs,
+            reason: 'Simultaneous connection from different IP',
+          });
         }
       } catch (err) {
-        console.error('⚠️  Ошибка при отключении пользователя:', err.message);
-        return { allowed: false, reason: 'Internal error' };
+        console.error('⚠️  Ошибка при отправке уведомления о подозрительной активности:', err.message);
       }
     }
 
