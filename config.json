@@ -4,6 +4,7 @@
     "host": "0.0.0.0",
     "port": 8444,
     "publicIp": "aiquantums.ru",
+    "serverIp": "77.221.156.12",
     "secret": "",
     "minIdleServers": 2,
     "sponsorTag": "08b314545389de5c415dd881f1babee4",

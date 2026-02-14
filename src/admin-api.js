@@ -43,7 +43,10 @@ function send(res, statusCode, data) {
 }
 
 function createServer(options = {}) {
-  const { apiKey = '', port = 9090, host = '127.0.0.1', publicIp = 'aiquantums.ru', mtPort = 8444 } = options;
+  const { apiKey = '', port = 9090, host = '127.0.0.1', publicIp = 'aiquantums.ru', serverIp = null, mtPort = 8444 } = options;
+  const linkWithIp = serverIp && serverIp !== publicIp
+    ? `https://t.me/proxy?server=${serverIp}&port=${mtPort}&secret=`
+    : null;
 
   const server = http.createServer(async (req, res) => {
     if (apiKey && getApiKey(req) !== apiKey) {
@@ -73,6 +76,7 @@ function createServer(options = {}) {
           enabled: body.enabled !== false,
         });
         const link = `https://t.me/proxy?server=${publicIp}&port=${mtPort}&secret=${user.secret}`;
+        const linkIp = linkWithIp ? linkWithIp + user.secret : undefined;
         return send(res, 201, {
           id: user.id,
           telegramId: user.telegramId,
@@ -80,6 +84,7 @@ function createServer(options = {}) {
           firstname: user.firstname,
           secret: user.secret,
           link,
+          ...(linkIp && { linkIp }),
           activatedAt: user.activatedAt,
           expiresAt: user.expiresAt,
           enabled: user.enabled,
@@ -94,10 +99,9 @@ function createServer(options = {}) {
         if (!user) return send(res, 404, { error: 'User not found' });
 
         if (linkOnly === 'link') {
-          return send(res, 200, {
-            id: user.id,
-            link: `https://t.me/proxy?server=${publicIp}&port=${mtPort}&secret=${user.secret}`,
-          });
+          const link = `https://t.me/proxy?server=${publicIp}&port=${mtPort}&secret=${user.secret}`;
+          const linkIp = linkWithIp ? linkWithIp + user.secret : undefined;
+          return send(res, 200, { id: user.id, link, ...(linkIp && { linkIp }) });
         }
 
         if (method === 'GET') {

@@ -121,11 +121,13 @@ class ProxyServer {
 
     // API управления пользователями (MongoDB)
     if (config.api && config.api.enabled) {
+      const serverIp = config.mtproto?.serverIp || process.env.PROXY_SERVER_IP || null;
       this.adminApiServer = await startAdminApi({
         port: config.api.port || 9090,
         host: config.api.host || '0.0.0.0',
         apiKey: config.api.apiKey || process.env.PROXY_API_KEY || '',
         publicIp,
+        serverIp,
         mtPort: config.mtproto?.port || 8444,
       });
       console.log(`✅ API управления пользователями: http://${config.api.host || '0.0.0.0'}:${config.api.port || 9090}`);
