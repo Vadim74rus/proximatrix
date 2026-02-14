@@ -7,6 +7,7 @@
 const net = require('net');
 const crypto = require('crypto');
 const connectionTracker = require('./connection-tracker');
+const { throttleWarn } = require('./error-throttle');
 
 // Telegram Data Center серверы (порт 443)
 const TELEGRAM_SERVERS = [
@@ -280,7 +281,7 @@ class MTProtoServer {
             }
             if (!matched) {
               const count = this.getSecretList().length;
-              console.warn(`⚠️  MTProto: подключение отклонено — секрет клиента не совпал с активными (активных секретов: ${count}). Проверьте, что этот секрет добавлен в API и пользователь включён.`);
+              throttleWarn(`MTProto: подключение отклонено — секрет клиента не совпал с активными (активных секретов: ${count}). Проверьте, что этот секрет добавлен в API и пользователь включён.`);
               socket.destroy();
               return;
             }

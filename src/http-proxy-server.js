@@ -2,8 +2,10 @@ const http = require('http');
 const https = require('https');
 const net = require('net');
 const { URL } = require('url');
+const { throttleError } = require('./error-throttle');
 
 const CONNECT_LOG_ENABLED = process.env.PROXY_LOG_CONNECT !== '0';
+const PROXY_LOG_ERRORS = process.env.PROXY_LOG_ERRORS !== '0';
 const PROXY_REQUEST_TIMEOUT = parseInt(process.env.PROXY_REQUEST_TIMEOUT || '60000', 10) || 60000;
 const SOCKET_TIMEOUT = parseInt(process.env.PROXY_SOCKET_TIMEOUT || '120000', 10) || 120000;
 
@@ -103,7 +105,9 @@ class HttpProxyServer {
       });
 
       proxyReq.on('error', (err) => {
-        console.error(`❌ HTTP Proxy Error (${url.hostname}):`, err.message);
+        if (PROXY_LOG_ERRORS) {
+          throttleError('HTTP Proxy Error', url.hostname, err.message);
+        }
         res.writeHead(502, { 'Content-Type': 'text/plain' });
         res.end('Proxy Error: ' + err.message);
       });
@@ -136,8 +140,8 @@ class HttpProxyServer {
     targetSocket.setTimeout(SOCKET_TIMEOUT);
 
     targetSocket.on('error', (err) => {
-      if (CONNECT_LOG_ENABLED) {
-        console.error(`❌ HTTPS Proxy Connection Error (${targetHost}:${targetPort}):`, err.message);
+      if (PROXY_LOG_ERRORS) {
+        throttleError('HTTPS Proxy Connection Error', `${targetHost}:${targetPort}`, err.message);
       }
       try { socket.write('HTTP/1.1 502 Bad Gateway\r\n\r\n'); socket.end(); } catch (_) {}
       targetSocket.destroy();
