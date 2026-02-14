@@ -30,8 +30,6 @@ services:
       MTPROTO_SPONSOR_TAG: "08b314545389de5c415dd881f1babee4"
       MONGODB_URI: "mongodb://proximatrix:changeme_proximatrix_2026@mongo:27017/proximatrix?authSource=admin"
       PROXY_API_KEY: "proximatrix-api-key-change-in-production"
-      SSL_CERT_PATH: "src/ssl/certificate.crt"
-      SSL_KEY_PATH: "src/ssl/certificate.key"
       NOTIFY_API_URL: "https://blacknetiv.ru"
       NOTIFY_SECRET: ""
     ports:
