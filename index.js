@@ -55,6 +55,7 @@ class ProxyServer {
         port: config.mtproto.port,
         host: config.mtproto.host,
         publicIp,
+        minIdleServers: config.mtproto.minIdleServers, // для стабильного пинга (см. PING_OPTIMIZATION.md)
       };
       if (useMultiUser) {
         opts.getSecrets = () => usersMongo.getEnabledSecretsSync();

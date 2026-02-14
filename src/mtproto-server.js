@@ -18,7 +18,7 @@ const TELEGRAM_SERVERS = [
 ];
 
 const CON_TIMEOUT = 5 * 60 * 1000; // 5 минут
-const MIN_IDLE_SERVERS = 2;
+const DEFAULT_MIN_IDLE = 2; // Минимум готовых соединений к каждому DC (больше = стабильнее пинг при пиках)
 
 function reverseInplace(buffer) {
   for (let i = 0, j = buffer.length - 1; i < j; ++i, --j) {
@@ -37,7 +37,8 @@ class MTProtoServer {
     this.getSecrets = options.getSecrets || null;
     this.server = null;
     this.serverIdleCons = [];
-    this.telegramIdleNum = TELEGRAM_SERVERS.map(() => MIN_IDLE_SERVERS);
+    const minIdle = Math.max(1, Math.min(10, parseInt(options.minIdleServers, 10) || DEFAULT_MIN_IDLE));
+    this.telegramIdleNum = TELEGRAM_SERVERS.map(() => minIdle);
     this.onSuspiciousActivity = options.onSuspiciousActivity || null;
 
     // Настраиваем callback для уведомлений
@@ -65,6 +66,7 @@ class MTProtoServer {
   createIdleServer(id, ip) {
     const client = new net.Socket();
     client.setKeepAlive(true);
+    client.setNoDelay(true); // Меньше задержка: отключаем алгоритм Нейгла (сразу отправка мелких пакетов)
 
     client.on('timeout', () => {
       client.destroy();
@@ -174,6 +176,7 @@ class MTProtoServer {
 
       this.server = net.createServer((socket) => {
         socket.setTimeout(CON_TIMEOUT);
+        socket.setNoDelay(true); // Стабильный низкий пинг: пакеты уходят сразу, без буферизации Нейгла
         const clientIP = normalizeIP(socket.remoteAddress) || 'unknown';
         let matchedSecret = null;
 
@@ -294,6 +297,7 @@ class MTProtoServer {
               if (socket.serverSocket) {
                 socket.serverSocket.setTimeout(CON_TIMEOUT);
                 socket.serverSocket.setKeepAlive(false);
+                socket.serverSocket.setNoDelay(true); // Минимальная задержка прокси → Telegram
                 socket.serverSocket.clientSocket = socket;
               }
             } else {
