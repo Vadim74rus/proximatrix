@@ -150,7 +150,7 @@ class ProxyServer {
         ssl,
       });
       const scheme = ssl ? 'https' : 'http';
-      console.log(`✅ API управления пользователями: ${scheme}://${config.api.host || '0.0.0.0'}:${config.api.port || 9090}${ssl ? ' (HTTPS, aiquantums.ru)' : ''}`);
+      console.log(`✅ API управления пользователями: ${scheme}://${config.api.host || '0.0.0.0'}:${config.api.port || 9090}${ssl ? ' (HTTPS)' : ''}`);
       if (config.api.apiKey) console.log(`   Защита: X-API-Key`);
     }
 

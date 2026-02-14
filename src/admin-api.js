@@ -45,7 +45,7 @@ function send(res, statusCode, data) {
 }
 
 function createServer(options = {}) {
-  const { apiKey = '', port = 9090, host = '127.0.0.1', publicIp = 'aiquantums.ru', serverIp = null, mtPort = 8444 } = options;
+  const { apiKey = '', port = 9090, host = '127.0.0.1', publicIp = '77.221.156.12', serverIp = null, mtPort = 8444 } = options;
   const linkWithIp = serverIp && serverIp !== publicIp
     ? `https://t.me/proxy?server=${serverIp}&port=${mtPort}&secret=`
     : null;
@@ -89,6 +89,13 @@ function createServer(options = {}) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.writeHead(200);
       res.end(html);
+      return;
+    }
+
+    // Favicon — 204, чтобы не было 404 в консоли
+    if ((pathname === '/favicon.ico' || pathname === 'favicon.ico') && method === 'GET') {
+      res.writeHead(204, { 'Content-Length': '0' });
+      res.end();
       return;
     }
 
