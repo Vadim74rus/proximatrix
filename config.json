@@ -6,7 +6,8 @@
     "publicIp": "77.221.156.12",
     "secret": "",
     "minIdleServers": 2,
-    "description": "MTProto прокси для Telegram (minIdleServers: 3-4 для стабильного пинга)"
+    "sponsorTag": "08b314545389de5c415dd881f1babee4",
+    "description": "MTProto прокси для Telegram. sponsorTag: тег от @MTProxyBot для канала спонсора (см. SPONSOR_CHANNEL.md)"
   },
   "socks5": {
     "enabled": false,

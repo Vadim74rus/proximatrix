@@ -40,6 +40,7 @@ class MTProtoServer {
     const minIdle = Math.max(1, Math.min(10, parseInt(options.minIdleServers, 10) || DEFAULT_MIN_IDLE));
     this.telegramIdleNum = TELEGRAM_SERVERS.map(() => minIdle);
     this.onSuspiciousActivity = options.onSuspiciousActivity || null;
+    this.sponsorTag = options.sponsorTag || null; // тег от @MTProxyBot для канала спонсора (передача в протокол пока не реализована)
 
     // Настраиваем callback для уведомлений
     if (this.onSuspiciousActivity) {

@@ -275,7 +275,8 @@ npm start
 3. Ключ `PROXY_API_KEY` должен совпадать с `PROXY_API_KEY` в `docker-compose.yml` на сервере Proximatrix
 
 **Документация API:** [API.md](API.md)  
-**Ключи и настройки:** [DEPLOY_KEYS.md](DEPLOY_KEYS.md)
+**Ключи и настройки:** [DEPLOY_KEYS.md](DEPLOY_KEYS.md)  
+**Канал спонсора в Telegram:** [SPONSOR_CHANNEL.md](SPONSOR_CHANNEL.md)
 
 ## 🔒 Безопасность
 

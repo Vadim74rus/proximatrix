@@ -56,6 +56,7 @@ class ProxyServer {
         host: config.mtproto.host,
         publicIp,
         minIdleServers: config.mtproto.minIdleServers, // для стабильного пинга (см. PING_OPTIMIZATION.md)
+        sponsorTag: process.env.MTPROTO_SPONSOR_TAG || config.mtproto?.sponsorTag || undefined, // тег от @MTProxyBot (см. SPONSOR_CHANNEL.md)
       };
       if (useMultiUser) {
         opts.getSecrets = () => usersMongo.getEnabledSecretsSync();
