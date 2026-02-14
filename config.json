@@ -3,7 +3,7 @@
     "enabled": true,
     "host": "0.0.0.0",
     "port": 8444,
-    "publicIp": "77.221.156.12",
+    "publicIp": "aiquantums.ru",
     "secret": "",
     "minIdleServers": 2,
     "sponsorTag": "08b314545389de5c415dd881f1babee4",

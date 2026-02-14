@@ -43,7 +43,7 @@ function send(res, statusCode, data) {
 }
 
 function createServer(options = {}) {
-  const { apiKey = '', port = 9090, host = '127.0.0.1', publicIp = '77.221.156.12', mtPort = 8444 } = options;
+  const { apiKey = '', port = 9090, host = '127.0.0.1', publicIp = 'aiquantums.ru', mtPort = 8444 } = options;
 
   const server = http.createServer(async (req, res) => {
     if (apiKey && getApiKey(req) !== apiKey) {

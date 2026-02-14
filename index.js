@@ -112,6 +112,11 @@ class ProxyServer {
       if (publicIp === 'YOUR_IP') {
         console.log(`   ⚠️  Укажите IP в config.json (mtproto.publicIp) или PROXY_PUBLIC_IP`);
       }
+      const sponsorTag = process.env.MTPROTO_SPONSOR_TAG || config.mtproto?.sponsorTag;
+      if (sponsorTag) {
+        console.log(`   📢 Канал спонсора: тег ${sponsorTag.slice(0, 8)}... (зарегистрирован в @MTProxyBot)`);
+        console.log(`   💡 Telegram может показывать канал в списке чатов по IP прокси (${publicIp}).`);
+      }
     }
 
     // API управления пользователями (MongoDB)

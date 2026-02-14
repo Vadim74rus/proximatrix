@@ -26,7 +26,7 @@ services:
       mongo:
         condition: service_healthy
     environment:
-      PROXY_PUBLIC_IP: "77.221.156.12"
+      PROXY_PUBLIC_IP: "aiquantums.ru"
       MTPROTO_SPONSOR_TAG: "08b314545389de5c415dd881f1babee4"
       MONGODB_URI: "mongodb://proximatrix:changeme_proximatrix_2026@mongo:27017/proximatrix?authSource=admin"
       PROXY_API_KEY: "proximatrix-api-key-change-in-production"
