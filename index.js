@@ -1,5 +1,6 @@
+const fs = require('fs');
+const path = require('path');
 const http = require('http');
-const https = require('https');
 const net = require('net');
 const { MTProtoServer } = require('./src/mtproto-server');
 const { SocksServer } = require('./src/socks5-server');
@@ -122,6 +123,23 @@ class ProxyServer {
     // API управления пользователями (MongoDB)
     if (config.api && config.api.enabled) {
       const serverIp = config.mtproto?.serverIp || process.env.PROXY_SERVER_IP || null;
+      const certPath = config.api.sslCert || process.env.SSL_CERT_PATH || '';
+      const keyPath = config.api.sslKey || process.env.SSL_KEY_PATH || '';
+      const caPath = config.api.sslCa || process.env.SSL_CA_PATH || '';
+      let ssl = null;
+      if (certPath && keyPath) {
+        const resolvePath = (p) => (path.isAbsolute(p) ? p : path.join(process.cwd(), p));
+        try {
+          const cert = fs.readFileSync(resolvePath(certPath));
+          const key = fs.readFileSync(resolvePath(keyPath));
+          ssl = { key, cert };
+          if (caPath && fs.existsSync(resolvePath(caPath))) {
+            ssl.ca = fs.readFileSync(resolvePath(caPath));
+          }
+        } catch (err) {
+          console.warn('⚠️  SSL-сертификаты не загружены:', err.message, '— API работает по HTTP');
+        }
+      }
       this.adminApiServer = await startAdminApi({
         port: config.api.port || 9090,
         host: config.api.host || '0.0.0.0',
@@ -129,8 +147,10 @@ class ProxyServer {
         publicIp,
         serverIp,
         mtPort: config.mtproto?.port || 8444,
+        ssl,
       });
-      console.log(`✅ API управления пользователями: http://${config.api.host || '0.0.0.0'}:${config.api.port || 9090}`);
+      const scheme = ssl ? 'https' : 'http';
+      console.log(`✅ API управления пользователями: ${scheme}://${config.api.host || '0.0.0.0'}:${config.api.port || 9090}${ssl ? ' (HTTPS, aiquantums.ru)' : ''}`);
       if (config.api.apiKey) console.log(`   Защита: X-API-Key`);
     }
 

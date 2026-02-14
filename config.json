@@ -37,7 +37,10 @@
     "port": 9090,
     "host": "0.0.0.0",
     "apiKey": "",
-    "description": "API управления пользователями (MongoDB)"
+    "sslCert": "src/ssl/certificate.crt",
+    "sslKey": "src/ssl/certificate.key",
+    "sslCa": "src/ssl/certificate_ca.crt",
+    "description": "API управления пользователями (MongoDB), HTTPS aiquantums.ru"
   },
   "mongo": {
     "uri": "",

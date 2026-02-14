@@ -1,9 +1,11 @@
 /**
  * API управления пользователями MTProxy (MongoDB).
  * Защита: заголовок X-API-Key или query ?apiKey=...
+ * Поддержка HTTPS через options.ssl (key, cert, ca).
  */
 
 const http = require('http');
+const https = require('https');
 const usersMongo = require('./users-mongo');
 
 const MAX_BODY_SIZE = 1024 * 256; // 256 KB
@@ -48,7 +50,7 @@ function createServer(options = {}) {
     ? `https://t.me/proxy?server=${serverIp}&port=${mtPort}&secret=`
     : null;
 
-  const server = http.createServer(async (req, res) => {
+  const handler = async (req, res) => {
     if (apiKey && getApiKey(req) !== apiKey) {
       send(res, 401, { error: 'Invalid or missing API key' });
       return;
@@ -168,8 +170,11 @@ function createServer(options = {}) {
         error: err.message === 'Request body too large' ? 'Request body too large' : (err.message || 'Internal error'),
       });
     }
-  });
+  };
 
+  const server = options.ssl && options.ssl.key && options.ssl.cert
+    ? https.createServer(options.ssl, handler)
+    : http.createServer(handler);
   return server;
 }
 
