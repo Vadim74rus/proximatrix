@@ -2,8 +2,6 @@
 
 Если ссылки вида  
 `https://t.me/proxy?server=77.221.156.12&port=8444&secret=...`  
-или  
-`https://t.me/proxy?server=aiquantums.ru&port=8444&secret=...`  
 **не подключаются**, проверьте по шагам ниже.
 
 ---

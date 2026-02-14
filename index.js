@@ -10,6 +10,10 @@ const usersMongo = require('./src/users-mongo');
 const { start: startAdminApi } = require('./src/admin-api');
 const notifyService = require('./src/notify-service');
 const config = require('./config.json');
+const logBuffer = require('./src/log-buffer');
+
+// Инициализация буфера логов для API
+logBuffer.init();
 
 class ProxyServer {
   constructor() {

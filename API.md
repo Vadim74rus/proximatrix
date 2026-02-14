@@ -264,3 +264,43 @@ curl -X DELETE -H "X-API-Key: ваш-api-ключ" \
 ```
 
 Все ключи и шаги деплоя — в [DEPLOY_KEYS.md](DEPLOY_KEYS.md).
+
+---
+
+## Просмотр логов сервера
+
+```http
+GET /api/logs?limit=100&level=all&offset=0
+X-API-Key: ваш-секретный-ключ
+```
+
+**Параметры query:**
+- `limit` (опционально, по умолчанию 100, макс. 500) — количество последних строк логов
+- `level` (опционально) — фильтр по уровню: `all`, `info`, `warn`, `error` или через запятую `error,warn`
+- `offset` (опционально, по умолчанию 0) — смещение от конца (для пагинации)
+
+**Ответ 200:**
+```json
+{
+  "logs": [
+    {
+      "timestamp": "2025-02-14T12:30:00.000Z",
+      "level": "info",
+      "message": "✅ MTProto прокси запущен на порту 8444"
+    },
+    {
+      "timestamp": "2025-02-14T12:30:01.000Z",
+      "level": "warn",
+      "message": "⚠️  Подозрительная активность: секрет a1b2c3d4..."
+    }
+  ],
+  "total": 150,
+  "limit": 100
+}
+```
+
+**Пример:**
+```bash
+curl -H "X-API-Key: ваш-api-ключ" "http://77.221.156.12:9090/api/logs?limit=50"
+curl -H "X-API-Key: ваш-api-ключ" "http://77.221.156.12:9090/api/logs?limit=200&level=error,warn"
+```

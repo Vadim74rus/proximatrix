@@ -7,6 +7,7 @@
 const http = require('http');
 const https = require('https');
 const usersMongo = require('./users-mongo');
+const logBuffer = require('./log-buffer');
 
 const MAX_BODY_SIZE = 1024 * 256; // 256 KB
 
@@ -79,9 +80,9 @@ function createServer(options = {}) {
     <strong>Почему при переходе по адресу не работает?</strong>
     <ul>
       <li><strong>Корень (/)</strong> — эта страница. API-ключ не нужен.</li>
-      <li><strong>/api/users</strong> и другие <code>/api/*</code> — требуют заголовок <code>X-API-Key</code> или параметр <code>?apiKey=...</code>. Без ключа ответ: <code>Invalid or missing API key</code>.</li>
+      <li><strong>/api/users</strong>, <strong>/api/logs</strong> и другие <code>/api/*</code> — требуют заголовок <code>X-API-Key</code> или параметр <code>?apiKey=...</code>. Без ключа ответ: <code>Invalid or missing API key</code>.</li>
     </ul>
-    Чтобы управлять пользователями, отправляйте запросы к <code>/api/users</code> с ключом (см. <a href="https://github.com/Vadim74rus/proximatrix/blob/main/API.md">API.md</a>, <a href="https://github.com/Vadim74rus/proximatrix/blob/main/KEYS_FOR_EXTERNAL_SERVER.md">KEYS_FOR_EXTERNAL_SERVER.md</a>).
+    Чтобы управлять пользователями и просматривать логи, отправляйте запросы к <code>/api/users</code>, <code>/api/logs</code> с ключом (см. <a href="https://github.com/Vadim74rus/proximatrix/blob/main/API.md">API.md</a>, <a href="https://github.com/Vadim74rus/proximatrix/blob/main/KEYS_FOR_EXTERNAL_SERVER.md">KEYS_FOR_EXTERNAL_SERVER.md</a>).
   </div>
   <p><a href="https://t.me/ai_quantums">Канал AI QUANTUM</a></p>
 </body>
@@ -118,6 +119,7 @@ function createServer(options = {}) {
           username: body.username || body.name,
           name: body.name || body.username,
           firstname: body.firstname,
+          secret: body.secret,
           activatedAt: body.activatedAt,
           expiresAt: body.expiresAt,
           enabled: body.enabled !== false,
@@ -206,6 +208,14 @@ function createServer(options = {}) {
         const u = await usersMongo.resetAllowedIPs(id);
         if (!u) return send(res, 404, { error: 'User not found' });
         return send(res, 200, { id, message: 'Allowed IPs reset', allowedIPs: u.allowedIPs });
+      }
+
+      if (pathname === '/api/logs' && method === 'GET') {
+        const limit = Math.min(500, Math.max(1, parseInt(url.searchParams.get('limit') || '100', 10)));
+        const level = url.searchParams.get('level') || 'all';
+        const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10));
+        const { logs, total } = logBuffer.getLogs({ limit, level, offset });
+        return send(res, 200, { logs, total, limit });
       }
 
       send(res, 404, { error: 'Not found' });
