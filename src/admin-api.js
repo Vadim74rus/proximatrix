@@ -51,14 +51,52 @@ function createServer(options = {}) {
     : null;
 
   const handler = async (req, res) => {
-    if (apiKey && getApiKey(req) !== apiKey) {
-      send(res, 401, { error: 'Invalid or missing API key' });
-      return;
-    }
-
     const url = new URL(req.url || '/', 'http://' + host);
     const pathname = url.pathname.replace(/\/$/, '') || '/';
     const method = req.method;
+
+    // Главная страница (без API-ключа)
+    if ((pathname === '/' || pathname === '') && method === 'GET') {
+      const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proximatrix — MTProxy для Telegram</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 1rem; background: #1a1a2e; color: #eee; }
+    h1 { color: #0f0; }
+    a { color: #6cf; }
+    code { background: #333; padding: .2em .4em; border-radius: 4px; }
+    .box { background: #16213e; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+    ul { margin: .5rem 0; padding-left: 1.2rem; }
+  </style>
+</head>
+<body>
+  <h1>Proximatrix</h1>
+  <p>MTProxy для Telegram и прокси для WhatsApp.</p>
+  <div class="box">
+    <strong>Почему при переходе по адресу не работает?</strong>
+    <ul>
+      <li><strong>Корень (/)</strong> — эта страница. API-ключ не нужен.</li>
+      <li><strong>/api/users</strong> и другие <code>/api/*</code> — требуют заголовок <code>X-API-Key</code> или параметр <code>?apiKey=...</code>. Без ключа ответ: <code>Invalid or missing API key</code>.</li>
+    </ul>
+    Чтобы управлять пользователями, отправляйте запросы к <code>/api/users</code> с ключом (см. <a href="https://github.com/Vadim74rus/proximatrix/blob/main/API.md">API.md</a>, <a href="https://github.com/Vadim74rus/proximatrix/blob/main/KEYS_FOR_EXTERNAL_SERVER.md">KEYS_FOR_EXTERNAL_SERVER.md</a>).
+  </div>
+  <p><a href="https://t.me/ai_quantums">Канал AI QUANTUM</a></p>
+</body>
+</html>`;
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.writeHead(200);
+      res.end(html);
+      return;
+    }
+
+    // Для всех /api/* запросов нужен API-ключ
+    if (pathname.startsWith('/api') && apiKey && getApiKey(req) !== apiKey) {
+      send(res, 401, { error: 'Invalid or missing API key' });
+      return;
+    }
 
     try {
       if (pathname === '/api/users' && method === 'GET') {

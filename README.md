@@ -277,7 +277,8 @@ npm start
 **Документация API:** [API.md](API.md)  
 **Ключи и настройки:** [DEPLOY_KEYS.md](DEPLOY_KEYS.md)  
 **Канал спонсора в Telegram:** [SPONSOR_CHANNEL.md](SPONSOR_CHANNEL.md)  
-**Домен и сайт (DNS, nginx):** [DOMAIN_AND_WEBSITE.md](DOMAIN_AND_WEBSITE.md)
+**Домен и сайт (DNS, nginx):** [DOMAIN_AND_WEBSITE.md](DOMAIN_AND_WEBSITE.md)  
+**Не подключается к прокси?** [PROXY_CONNECTION_CHECKLIST.md](PROXY_CONNECTION_CHECKLIST.md)
 
 ## 🔒 Безопасность
 

@@ -214,7 +214,7 @@ class MTProtoServer {
 
             const secretsList = this.getSecretList();
             if (secretsList.length === 0) {
-              // В мультипользовательском режиме нет активных секретов - отклоняем соединение
+              console.warn('⚠️  MTProto: подключение отклонено — в базе нет активных секретов (enabled, не истёк). Создайте пользователя через API.');
               socket.destroy();
               return;
             }
@@ -279,6 +279,8 @@ class MTProtoServer {
               }
             }
             if (!matched) {
+              const count = this.getSecretList().length;
+              console.warn(`⚠️  MTProto: подключение отклонено — секрет клиента не совпал с активными (активных секретов: ${count}). Проверьте, что этот секрет добавлен в API и пользователь включён.`);
               socket.destroy();
               return;
             }
